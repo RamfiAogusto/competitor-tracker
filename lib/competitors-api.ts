@@ -48,6 +48,7 @@ export interface CreateCompetitorData {
   description?: string
   monitoringEnabled?: boolean
   checkInterval?: number
+  priority?: 'low' | 'medium' | 'high'
 }
 
 export interface UpdateCompetitorData {
@@ -56,6 +57,7 @@ export interface UpdateCompetitorData {
   description?: string
   monitoringEnabled?: boolean
   checkInterval?: number
+  priority?: 'low' | 'medium' | 'high'
 }
 
 export interface CompetitorsResponse {

@@ -40,6 +40,16 @@ export default function CompetitorsPage() {
     priority: 'medium' as 'low' | 'medium' | 'high'
   })
 
+  // Estado para edición
+  const [editingCompetitor, setEditingCompetitor] = useState<Competitor | null>(null)
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    url: '',
+    description: '',
+    monitoringEnabled: true,
+    priority: 'medium' as 'low' | 'medium' | 'high'
+  })
+
   // Cargar datos
   useEffect(() => {
     if (isAuthenticated) {
@@ -76,6 +86,37 @@ export default function CompetitorsPage() {
       await loadData() // Recargar datos
     } catch (err: any) {
       console.error('Error creating competitor:', err)
+      
+      // Usar el mensaje específico del backend si está disponible
+      if (err.message && err.message !== 'HTTP error! status: 409') {
+        setError(err.message)
+      } else {
+        setError('Ya existe un competidor con esta URL. Por favor, usa una URL diferente.')
+      }
+    }
+  }
+
+  const handleEditCompetitor = (competitor: Competitor) => {
+    setEditingCompetitor(competitor)
+    setEditFormData({
+      name: competitor.name,
+      url: competitor.url,
+      description: competitor.description || '',
+      monitoringEnabled: competitor.monitoringEnabled,
+      priority: competitor.priority
+    })
+  }
+
+  const handleUpdateCompetitor = async () => {
+    if (!editingCompetitor) return
+
+    try {
+      await competitorsApi.updateCompetitor(editingCompetitor.id, editFormData)
+      setEditingCompetitor(null)
+      setError(null)
+      await loadData() // Recargar datos
+    } catch (err: any) {
+      console.error('Error updating competitor:', err)
       
       // Usar el mensaje específico del backend si está disponible
       if (err.message && err.message !== 'HTTP error! status: 409') {
@@ -373,7 +414,7 @@ export default function CompetitorsPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditCompetitor(competitor)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
@@ -458,6 +499,96 @@ export default function CompetitorsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Dialog para editar competidor */}
+      <Dialog open={!!editingCompetitor} onOpenChange={(open) => !open && setEditingCompetitor(null)}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Editar Competidor</DialogTitle>
+            <DialogDescription>
+              Modifica la información del competidor.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-name" className="text-right">
+                Nombre
+              </Label>
+              <Input
+                id="edit-name"
+                value={editFormData.name}
+                onChange={(e) => setEditFormData({ ...editFormData, name: e.target.value })}
+                className="col-span-3"
+                placeholder="Nombre del competidor"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-url" className="text-right">
+                URL
+              </Label>
+              <Input
+                id="edit-url"
+                value={editFormData.url}
+                onChange={(e) => setEditFormData({ ...editFormData, url: e.target.value })}
+                className="col-span-3"
+                placeholder="https://ejemplo.com"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-description" className="text-right">
+                Descripción
+              </Label>
+              <Input
+                id="edit-description"
+                value={editFormData.description}
+                onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+                className="col-span-3"
+                placeholder="Descripción opcional"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-priority" className="text-right">
+                Prioridad
+              </Label>
+              <select
+                id="edit-priority"
+                value={editFormData.priority}
+                onChange={(e) => setEditFormData({ ...editFormData, priority: e.target.value as 'low' | 'medium' | 'high' })}
+                className="col-span-3 flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <option value="low">Low Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="high">High Priority</option>
+              </select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-monitoring" className="text-right">
+                Monitoreo
+              </Label>
+              <div className="col-span-3 flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  id="edit-monitoring"
+                  checked={editFormData.monitoringEnabled}
+                  onChange={(e) => setEditFormData({ ...editFormData, monitoringEnabled: e.target.checked })}
+                  className="h-4 w-4"
+                />
+                <Label htmlFor="edit-monitoring" className="text-sm">
+                  Habilitar monitoreo
+                </Label>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditingCompetitor(null)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateCompetitor}>
+              Guardar Cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   )
 }
