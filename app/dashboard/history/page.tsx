@@ -47,7 +47,10 @@ export default function HistoryPage() {
     
     try {
       const date = new Date(timestamp)
-      if (isNaN(date.getTime())) return 'Fecha inválida'
+      
+      if (isNaN(date.getTime())) {
+        return 'Fecha inválida'
+      }
       
       const now = new Date()
       const diffMs = now.getTime() - date.getTime()

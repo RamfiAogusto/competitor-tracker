@@ -54,6 +54,11 @@ export default function NotificationsPage() {
           alertsApi.getStats('7d')
         ])
         
+        // Debug: Log first alert structure
+        if (alertsResponse.data.length > 0) {
+          console.log('Frontend received alert:', JSON.stringify(alertsResponse.data[0], null, 2))
+        }
+        
         setAlerts(alertsResponse.data)
         setStats(statsResponse.data)
       } catch (err) {
