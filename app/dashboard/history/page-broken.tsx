@@ -28,8 +28,8 @@ import {
 } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { useAuth } from "@/contexts/AuthContext"
-import { historyApi, ChangeHistoryItem, ChangeStats, ChangeDetails, GetChangesParams } from "@/lib/history-api"
-import { competitorsApi, Competitor as CompetitorType } from "@/lib/competitors-api"
+import { historyApi, ChangeHistoryItem, ChangeStats, ChangeDetails } from "@/lib/history-api"
+import { competitorsApi } from "@/lib/competitors-api"
 import { useState, useEffect } from "react"
 
 export default function HistoryPage() {
@@ -37,7 +37,7 @@ export default function HistoryPage() {
   const [selectedChange, setSelectedChange] = useState<ChangeDetails | null>(null)
   const [changes, setChanges] = useState<ChangeHistoryItem[]>([])
   const [stats, setStats] = useState<ChangeStats | null>(null)
-  const [competitors, setCompetitors] = useState<CompetitorType[]>([])
+  const [competitors, setCompetitors] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -98,7 +98,7 @@ export default function HistoryPage() {
     }
   }
 
-  const handleFilterChange = (key: keyof GetChangesParams, value: string) => {
+  const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({
       ...prev,
       [key]: value,
@@ -237,8 +237,8 @@ export default function HistoryPage() {
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search changes..."
+                <Input 
+                  placeholder="Search changes..." 
                   className="pl-10"
                   value={filters.search}
                   onChange={(e) => handleFilterChange('search', e.target.value)}
@@ -346,72 +346,72 @@ export default function HistoryPage() {
                             <Eye className="h-4 w-4" />
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle>{selectedChange?.title || change.title}</DialogTitle>
-                            <DialogDescription>
-                              {selectedChange?.competitorName || change.competitorName} • {selectedChange?.timestamp || change.timestamp}
-                            </DialogDescription>
-                          </DialogHeader>
+                      <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                          <DialogTitle>{selectedChange?.title || change.title}</DialogTitle>
+                          <DialogDescription>
+                            {selectedChange?.competitorName || change.competitorName} • {selectedChange?.timestamp || change.timestamp}
+                          </DialogDescription>
+                        </DialogHeader>
 
-                          <Tabs defaultValue="changes" className="w-full">
-                            <TabsList className="grid w-full grid-cols-3">
-                              <TabsTrigger value="changes">Changes</TabsTrigger>
-                              <TabsTrigger value="screenshot">Screenshot</TabsTrigger>
-                              <TabsTrigger value="code">Code Diff</TabsTrigger>
-                            </TabsList>
+                        <Tabs defaultValue="changes" className="w-full">
+                          <TabsList className="grid w-full grid-cols-3">
+                            <TabsTrigger value="changes">Changes</TabsTrigger>
+                            <TabsTrigger value="screenshot">Screenshot</TabsTrigger>
+                            <TabsTrigger value="code">Code Diff</TabsTrigger>
+                          </TabsList>
 
-                            <TabsContent value="changes" className="space-y-4">
-                              <div className="space-y-3">
-                                {(selectedChange?.changes || []).map((item: any, index: number) => (
-                                  <div key={index} className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
-                                    <div className={`text-sm font-medium ${getChangeTypeColor(item.type)} capitalize`}>
-                                      {item.type}
-                                    </div>
-                                    <div className="text-sm flex-1">{item.content}</div>
+                          <TabsContent value="changes" className="space-y-4">
+                            <div className="space-y-3">
+                              {(selectedChange?.changes || []).map((item: any, index: number) => (
+                                <div key={index} className="flex items-start space-x-3 p-3 bg-muted/50 rounded-lg">
+                                  <div className={`text-sm font-medium ${getChangeTypeColor(item.type)} capitalize`}>
+                                    {item.type}
                                   </div>
-                                ))}
-                                {(!selectedChange?.changes || selectedChange.changes.length === 0) && (
-                                  <div className="text-center py-4 text-muted-foreground">
-                                    No hay detalles específicos disponibles para este cambio.
-                                  </div>
-                                )}
-                              </div>
-                            </TabsContent>
-
-                            <TabsContent value="screenshot">
-                              <div className="space-y-4">
-                                <img
-                                  src={selectedChange?.screenshot || "/placeholder.svg"}
-                                  alt="Website screenshot"
-                                  className="w-full rounded-lg border"
-                                />
-                                <p className="text-sm text-muted-foreground text-center">
-                                  Screenshots automáticos próximamente
-                                </p>
-                              </div>
-                            </TabsContent>
-
-                            <TabsContent value="code">
-                              <div className="space-y-4">
-                                <div className="bg-muted p-4 rounded-lg">
-                                  <div className="flex items-center space-x-2 mb-2">
-                                    <Code className="h-4 w-4" />
-                                    <span className="text-sm font-medium">HTML Changes</span>
-                                  </div>
-                                  <pre className="text-xs text-muted-foreground overflow-x-auto">
-                                    {selectedChange?.codeDiff || 'No hay diff de código disponible para este cambio.'}
-                                  </pre>
+                                  <div className="text-sm flex-1">{item.content}</div>
                                 </div>
+                              ))}
+                              {(!selectedChange?.changes || selectedChange.changes.length === 0) && (
+                                <div className="text-center py-4 text-muted-foreground">
+                                  No hay detalles específicos disponibles para este cambio.
+                                </div>
+                              )}
+                            </div>
+                          </TabsContent>
+
+                          <TabsContent value="screenshot">
+                            <div className="space-y-4">
+                              <img
+                                src={selectedChange?.screenshot || "/placeholder.svg"}
+                                alt="Website screenshot"
+                                className="w-full rounded-lg border"
+                              />
+                              <p className="text-sm text-muted-foreground text-center">
+                                Screenshots automáticos próximamente
+                              </p>
+                            </div>
+                          </TabsContent>
+
+                          <TabsContent value="code">
+                            <div className="space-y-4">
+                              <div className="bg-muted p-4 rounded-lg">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  <Code className="h-4 w-4" />
+                                  <span className="text-sm font-medium">HTML Changes</span>
+                                </div>
+                                <pre className="text-xs text-muted-foreground overflow-x-auto">
+                                  {selectedChange?.changeSummary || 'No hay diff de código disponible para este cambio.'}
+                                </pre>
                               </div>
-                            </TabsContent>
-                          </Tabs>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
+                            </div>
+                          </TabsContent>
+                        </Tabs>
+                      </DialogContent>
+                    </Dialog>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
+            </div>
             )}
           </CardContent>
         </Card>
