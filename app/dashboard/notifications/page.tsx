@@ -33,49 +33,113 @@ import {
   Trash2,
 } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { alertsApi, Alert, AlertStats } from "@/lib/alerts-api"
+import { competitorsApi } from "@/lib/competitors-api"
 
 export default function NotificationsPage() {
   const [isAddRuleDialogOpen, setIsAddRuleDialogOpen] = useState(false)
+  const [alerts, setAlerts] = useState<Alert[]>([])
+  const [stats, setStats] = useState<AlertStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const notifications = [
-    {
-      id: 1,
-      title: "TechCorp pricing page updated",
-      message: "New Enterprise Plus tier added at $299/month",
-      type: "critical",
-      competitor: "TechCorp",
-      timestamp: "2 minutes ago",
-      read: false,
-    },
-    {
-      id: 2,
-      title: "StartupXYZ homepage changes",
-      message: "Hero section updated with new messaging",
-      type: "medium",
-      competitor: "StartupXYZ",
-      timestamp: "15 minutes ago",
-      read: false,
-    },
-    {
-      id: 3,
-      title: "CompetitorA blog post",
-      message: "New article published about AI trends",
-      type: "low",
-      competitor: "CompetitorA",
-      timestamp: "1 hour ago",
-      read: true,
-    },
-    {
-      id: 4,
-      title: "RivalBusiness feature update",
-      message: "AI Analytics Dashboard added to platform",
-      type: "high",
-      competitor: "RivalBusiness",
-      timestamp: "3 hours ago",
-      read: true,
-    },
-  ]
+  // Cargar alertas y estadísticas
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true)
+        const [alertsResponse, statsResponse] = await Promise.all([
+          alertsApi.getAlerts({ limit: 50 }),
+          alertsApi.getStats('7d')
+        ])
+        
+        setAlerts(alertsResponse.data)
+        setStats(statsResponse.data)
+      } catch (err) {
+        console.error('Error cargando alertas:', err)
+        setError(err instanceof Error ? err.message : 'Error desconocido')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [])
+
+  const handleMarkAsRead = async (alertId: string) => {
+    try {
+      await alertsApi.markAsRead(alertId)
+      setAlerts(prev => prev.map(alert => 
+        alert.id === alertId 
+          ? { ...alert, status: 'read' as const, readAt: new Date().toISOString() }
+          : alert
+      ))
+      // Actualizar estadísticas
+      if (stats) {
+        setStats(prev => prev ? {
+          ...prev,
+          unread: Math.max(0, prev.unread - 1),
+          read: prev.read + 1
+        } : null)
+      }
+    } catch (err) {
+      console.error('Error marcando alerta como leída:', err)
+    }
+  }
+
+  const handleArchiveAlert = async (alertId: string) => {
+    try {
+      await alertsApi.archiveAlert(alertId)
+      setAlerts(prev => prev.filter(alert => alert.id !== alertId))
+      // Actualizar estadísticas
+      if (stats) {
+        setStats(prev => prev ? {
+          ...prev,
+          total: prev.total - 1,
+          unread: Math.max(0, prev.unread - 1),
+          archived: prev.archived + 1
+        } : null)
+      }
+    } catch (err) {
+      console.error('Error archivando alerta:', err)
+    }
+  }
+
+  const handleMarkAllAsRead = async () => {
+    try {
+      await alertsApi.markAllAsRead()
+      setAlerts(prev => prev.map(alert => ({
+        ...alert,
+        status: 'read' as const,
+        readAt: new Date().toISOString()
+      })))
+      if (stats) {
+        setStats(prev => prev ? {
+          ...prev,
+          unread: 0,
+          read: prev.read + prev.unread
+        } : null)
+      }
+    } catch (err) {
+      console.error('Error marcando todas las alertas como leídas:', err)
+    }
+  }
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 1) return 'Ahora mismo'
+    if (diffMins < 60) return `Hace ${diffMins} minuto${diffMins > 1 ? 's' : ''}`
+    if (diffHours < 24) return `Hace ${diffHours} hora${diffHours > 1 ? 's' : ''}`
+    if (diffDays < 7) return `Hace ${diffDays} día${diffDays > 1 ? 's' : ''}`
+    return date.toLocaleDateString('es-ES')
+  }
 
   const notificationRules = [
     {
@@ -232,47 +296,53 @@ export default function NotificationsPage() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Unread Alerts</CardTitle>
+              <CardTitle className="text-sm font-medium">Alertas No Leídas</CardTitle>
               <Bell className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3</div>
-              <p className="text-xs text-muted-foreground">2 critical, 1 medium</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Active Rules</CardTitle>
-              <Settings className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">2</div>
-              <p className="text-xs text-muted-foreground">1 rule disabled</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Today's Alerts</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">12</div>
+              <div className="text-2xl font-bold">{stats?.unread || 0}</div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-green-600">+4</span> from yesterday
+                {stats ? `${stats.bySeverity.critical} críticas, ${stats.bySeverity.high} altas` : 'Cargando...'}
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Response Time</CardTitle>
+              <CardTitle className="text-sm font-medium">Total de Alertas</CardTitle>
+              <Settings className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.total || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats ? `${stats.read} leídas, ${stats.archived} archivadas` : 'Cargando...'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Alertas Críticas</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats?.bySeverity.critical || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats ? `${stats.bySeverity.high} altas, ${stats.bySeverity.medium} medias` : 'Cargando...'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Cambios Detectados</CardTitle>
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1.2m</div>
-              <p className="text-xs text-muted-foreground">Average alert delay</p>
+              <div className="text-2xl font-bold">
+                {alerts.reduce((sum, alert) => sum + alert.changeCount, 0)}
+              </div>
+              <p className="text-xs text-muted-foreground">En las últimas 24 horas</p>
             </CardContent>
           </Card>
         </div>
@@ -292,53 +362,81 @@ export default function NotificationsPage() {
                     <CardTitle>Notification Inbox</CardTitle>
                     <CardDescription>Recent alerts from your monitored competitors</CardDescription>
                   </div>
-                  <Button variant="outline" size="sm">
-                    Mark All Read
+                  <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
+                    Marcar Todas como Leídas
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {notifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`flex items-start space-x-4 p-4 border rounded-lg transition-colors ${
-                        !notification.read ? "bg-accent/50 border-primary/20" : "border-border hover:bg-accent/30"
-                      }`}
-                    >
-                      <div className="flex items-center justify-center w-10 h-10 bg-muted rounded-lg flex-shrink-0">
-                        {getNotificationIcon(notification.type)}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h3
-                            className={`font-medium ${!notification.read ? "text-foreground" : "text-muted-foreground"}`}
+                {loading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-muted-foreground">Cargando alertas...</div>
+                  </div>
+                ) : error ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-destructive">Error: {error}</div>
+                  </div>
+                ) : alerts.length === 0 ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-muted-foreground">No hay alertas disponibles</div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {alerts.map((alert) => (
+                      <div
+                        key={alert.id}
+                        className={`flex items-start space-x-4 p-4 border rounded-lg transition-colors ${
+                          alert.status === 'unread' ? "bg-accent/50 border-primary/20" : "border-border hover:bg-accent/30"
+                        }`}
+                      >
+                        <div className="flex items-center justify-center w-10 h-10 bg-muted rounded-lg flex-shrink-0">
+                          {getNotificationIcon(alert.severity)}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2 mb-1">
+                            <h3
+                              className={`font-medium ${alert.status === 'unread' ? "text-foreground" : "text-muted-foreground"}`}
+                            >
+                              {alert.title}
+                            </h3>
+                            <Badge variant={getNotificationTypeColor(alert.severity)} className="text-xs">
+                              {alert.severity}
+                            </Badge>
+                            {alert.status === 'unread' && <div className="w-2 h-2 bg-primary rounded-full"></div>}
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">{alert.message}</p>
+                          <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                            <span className="font-medium">{alert.competitor?.name || 'Competidor desconocido'}</span>
+                            <span>•</span>
+                            <span>{formatTimestamp(alert.createdAt)}</span>
+                            <span>•</span>
+                            <span>{alert.changeCount} cambio{alert.changeCount !== 1 ? 's' : ''}</span>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2 flex-shrink-0">
+                          {alert.status === 'unread' && (
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleMarkAsRead(alert.id)}
+                              title="Marcar como leída"
+                            >
+                              <Check className="h-4 w-4" />
+                            </Button>
+                          )}
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleArchiveAlert(alert.id)}
+                            title="Archivar alerta"
                           >
-                            {notification.title}
-                          </h3>
-                          <Badge variant={getNotificationTypeColor(notification.type)} className="text-xs">
-                            {notification.type}
-                          </Badge>
-                          {!notification.read && <div className="w-2 h-2 bg-primary rounded-full"></div>}
-                        </div>
-                        <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
-                        <div className="flex items-center space-x-4 text-xs text-muted-foreground">
-                          <span className="font-medium">{notification.competitor}</span>
-                          <span>•</span>
-                          <span>{notification.timestamp}</span>
+                            <X className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2 flex-shrink-0">
-                        <Button variant="ghost" size="sm">
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm">
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
