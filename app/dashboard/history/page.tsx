@@ -30,7 +30,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { useAuth } from "@/contexts/AuthContext"
 import { historyApi, ChangeHistoryItem, ChangeStats, ChangeDetails, GetChangesParams } from "@/lib/history-api"
 import { competitorsApi, Competitor as CompetitorType } from "@/lib/competitors-api"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 
 export default function HistoryPage() {
   const { isAuthenticated } = useAuth()
@@ -51,6 +51,9 @@ export default function HistoryPage() {
     limit: 20
   })
 
+  // Estado separado para el input de búsqueda (con debounce)
+  const [searchInput, setSearchInput] = useState('')
+
   // Cargar datos
   useEffect(() => {
     if (isAuthenticated) {
@@ -58,12 +61,32 @@ export default function HistoryPage() {
     }
   }, [isAuthenticated, filters.page])
 
-  // Recargar datos cuando cambien los filtros (excepto page)
+  // Recargar datos cuando cambien los filtros (excepto page y search)
   useEffect(() => {
     if (isAuthenticated) {
       loadData()
     }
-  }, [filters.search, filters.competitorId, filters.type, filters.severity])
+  }, [filters.competitorId, filters.type, filters.severity])
+
+  // Debounce para el campo de búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters(prev => ({
+        ...prev,
+        search: searchInput,
+        page: 1 // Reset page when search changes
+      }))
+    }, 500) // 500ms de delay
+
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  // Cargar datos cuando cambie el filtro de búsqueda (después del debounce)
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadData()
+    }
+  }, [filters.search])
 
   const loadData = async () => {
     try {
@@ -104,6 +127,10 @@ export default function HistoryPage() {
       [key]: value,
       page: 1 // Reset page when filters change
     }))
+  }
+
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value)
   }
 
   const handleViewChange = async (change: ChangeHistoryItem) => {
@@ -240,8 +267,8 @@ export default function HistoryPage() {
                 <Input
                   placeholder="Search changes..."
                   className="pl-10"
-                  value={filters.search}
-                  onChange={(e) => handleFilterChange('search', e.target.value)}
+                  value={searchInput}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                 />
               </div>
               <Select value={filters.competitorId} onValueChange={(value) => handleFilterChange('competitorId', value)}>
