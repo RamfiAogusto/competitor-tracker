@@ -19,56 +19,110 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Plus, MoreHorizontal, ExternalLink, Eye, EyeOff, Trash2, Edit, Globe, Clock } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { competitorsApi, Competitor, CompetitorStats } from "@/lib/competitors-api"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function CompetitorsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
+  const [competitors, setCompetitors] = useState<Competitor[]>([])
+  const [stats, setStats] = useState<CompetitorStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const { isAuthenticated } = useAuth()
 
-  const competitors = [
-    {
-      id: 1,
-      name: "TechCorp",
-      url: "https://techcorp.com",
-      status: "active",
-      lastCheck: "2 minutes ago",
-      changes: 23,
-      priority: "high",
-      monitoring: true,
-    },
-    {
-      id: 2,
-      name: "StartupXYZ",
-      url: "https://startupxyz.io",
-      status: "active",
-      lastCheck: "5 minutes ago",
-      changes: 18,
-      priority: "medium",
-      monitoring: true,
-    },
-    {
-      id: 3,
-      name: "CompetitorA",
-      url: "https://competitora.com",
-      status: "active",
-      lastCheck: "1 hour ago",
-      changes: 12,
-      priority: "low",
-      monitoring: true,
-    },
-    {
-      id: 4,
-      name: "RivalBusiness",
-      url: "https://rivalbusiness.net",
-      status: "paused",
-      lastCheck: "3 hours ago",
-      changes: 8,
-      priority: "low",
-      monitoring: false,
-    },
-  ]
+  // Formulario para agregar competitor
+  const [formData, setFormData] = useState({
+    name: '',
+    url: '',
+    description: '',
+    monitoringEnabled: true
+  })
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
+  // Cargar datos
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadData()
+    }
+  }, [isAuthenticated])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const [competitorsResponse, statsResponse] = await Promise.all([
+        competitorsApi.getCompetitors(),
+        competitorsApi.getStats()
+      ])
+
+      setCompetitors(competitorsResponse.data)
+      setStats(statsResponse.data)
+    } catch (err) {
+      console.error('Error loading data:', err)
+      setError('Error al cargar los datos')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleAddCompetitor = async () => {
+    try {
+      await competitorsApi.createCompetitor(formData)
+      setIsAddDialogOpen(false)
+      setFormData({ name: '', url: '', description: '', monitoringEnabled: true })
+      await loadData() // Recargar datos
+    } catch (err) {
+      console.error('Error creating competitor:', err)
+      setError('Error al crear el competidor')
+    }
+  }
+
+  const handleToggleMonitoring = async (id: string, currentStatus: boolean) => {
+    try {
+      if (currentStatus) {
+        await competitorsApi.disableMonitoring(id)
+      } else {
+        await competitorsApi.enableMonitoring(id)
+      }
+      await loadData() // Recargar datos
+    } catch (err) {
+      console.error('Error toggling monitoring:', err)
+      setError('Error al cambiar el estado de monitoreo')
+    }
+  }
+
+  const handleDeleteCompetitor = async (id: string) => {
+    try {
+      await competitorsApi.deleteCompetitor(id)
+      await loadData() // Recargar datos
+    } catch (err) {
+      console.error('Error deleting competitor:', err)
+      setError('Error al eliminar el competidor')
+    }
+  }
+
+  const formatLastCheck = (lastCheckedAt?: string) => {
+    if (!lastCheckedAt) return 'Nunca'
+    
+    const date = new Date(lastCheckedAt)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return 'Ahora mismo'
+    if (diffInMinutes < 60) return `${diffInMinutes} minutos atrás`
+    
+    const diffInHours = Math.floor(diffInMinutes / 60)
+    if (diffInHours < 24) return `${diffInHours} horas atrás`
+    
+    const diffInDays = Math.floor(diffInHours / 24)
+    return `${diffInDays} días atrás`
+  }
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case "critical":
+        return "destructive"
       case "high":
         return "destructive"
       case "medium":
@@ -80,17 +134,34 @@ export default function CompetitorsPage() {
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "active":
-        return "bg-green-500"
-      case "paused":
-        return "bg-yellow-500"
-      case "error":
-        return "bg-red-500"
-      default:
-        return "bg-gray-500"
-    }
+  const getStatusColor = (monitoringEnabled: boolean) => {
+    return monitoringEnabled ? "bg-green-500" : "bg-yellow-500"
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Cargando competidores...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <p className="text-destructive mb-4">{error}</p>
+            <Button onClick={loadData}>Reintentar</Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
@@ -117,18 +188,37 @@ export default function CompetitorsPage() {
               <div className="grid gap-4 py-4">
                 <div className="grid gap-2">
                   <Label htmlFor="name">Company Name</Label>
-                  <Input id="name" placeholder="e.g. TechCorp" />
+                  <Input 
+                    id="name" 
+                    placeholder="e.g. TechCorp" 
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="url">Website URL</Label>
-                  <Input id="url" placeholder="https://example.com" />
+                  <Input 
+                    id="url" 
+                    placeholder="https://example.com" 
+                    value={formData.url}
+                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                  />
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="description">Description (Optional)</Label>
-                  <Textarea id="description" placeholder="Brief description of this competitor..." />
+                  <Textarea 
+                    id="description" 
+                    placeholder="Brief description of this competitor..." 
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  />
                 </div>
                 <div className="flex items-center space-x-2">
-                  <Switch id="monitoring" defaultChecked />
+                  <Switch 
+                    id="monitoring" 
+                    checked={formData.monitoringEnabled}
+                    onCheckedChange={(checked) => setFormData({ ...formData, monitoringEnabled: checked })}
+                  />
                   <Label htmlFor="monitoring">Start monitoring immediately</Label>
                 </div>
               </div>
@@ -136,7 +226,7 @@ export default function CompetitorsPage() {
                 <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={() => setIsAddDialogOpen(false)}>Add Competitor</Button>
+                <Button onClick={handleAddCompetitor}>Add Competitor</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -150,8 +240,8 @@ export default function CompetitorsPage() {
               <Globe className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">4</div>
-              <p className="text-xs text-muted-foreground">3 active, 1 paused</p>
+              <div className="text-2xl font-bold">{stats?.total || 0}</div>
+              <p className="text-xs text-muted-foreground">{stats?.active || 0} active, {stats?.paused || 0} paused</p>
             </CardContent>
           </Card>
 
@@ -161,18 +251,18 @@ export default function CompetitorsPage() {
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3</div>
-              <p className="text-xs text-muted-foreground">75% of competitors</p>
+              <div className="text-2xl font-bold">{stats?.active || 0}</div>
+              <p className="text-xs text-muted-foreground">{stats?.total ? Math.round((stats.active / stats.total) * 100) : 0}% of competitors</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">High Priority</CardTitle>
+              <CardTitle className="text-sm font-medium">High Severity</CardTitle>
               <Badge variant="destructive" className="h-4 w-4 rounded-full p-0"></Badge>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1</div>
+              <div className="text-2xl font-bold">{stats?.highPriority || 0}</div>
               <p className="text-xs text-muted-foreground">Requires attention</p>
             </CardContent>
           </Card>
@@ -183,7 +273,7 @@ export default function CompetitorsPage() {
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2.3m</div>
+              <div className="text-2xl font-bold">{stats?.avgCheckTime || '0m'}</div>
               <p className="text-xs text-muted-foreground">Every 5 minutes</p>
             </CardContent>
           </Card>
@@ -197,93 +287,107 @@ export default function CompetitorsPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {competitors.map((competitor) => (
-                <div
-                  key={competitor.id}
-                  className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors"
-                >
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-3 h-3 rounded-full ${getStatusColor(competitor.status)}`}></div>
-                      <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                        <span className="text-sm font-medium">
-                          {competitor.name
-                            .split(" ")
-                            .map((word) => word[0])
-                            .join("")
-                            .toUpperCase()}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex items-center space-x-2">
-                        <h3 className="font-medium">{competitor.name}</h3>
-                        <Badge variant={getPriorityColor(competitor.priority)} className="text-xs">
-                          {competitor.priority}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                        <span>{competitor.url}</span>
-                        <span>•</span>
-                        <span>{competitor.changes} changes</span>
-                        <span>•</span>
-                        <span>Last check: {competitor.lastCheck}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="sm" asChild>
-                      <a href={competitor.url} target="_blank" rel="noopener noreferrer">
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
-                    </Button>
-
-                    <Button variant="ghost" size="sm">
-                      {competitor.monitoring ? (
-                        <Eye className="h-4 w-4 text-green-600" />
-                      ) : (
-                        <EyeOff className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </Button>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Eye className="h-4 w-4 mr-2" />
-                          View Changes
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          {competitor.monitoring ? (
-                            <>
-                              <EyeOff className="h-4 w-4 mr-2" />
-                              Pause Monitoring
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="h-4 w-4 mr-2" />
-                              Resume Monitoring
-                            </>
-                          )}
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
+              {competitors.length === 0 ? (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No hay competidores agregados aún.</p>
+                  <p className="text-sm text-muted-foreground mt-2">Agrega tu primer competidor para comenzar el monitoreo.</p>
                 </div>
-              ))}
+              ) : (
+                competitors.map((competitor) => (
+                  <div
+                    key={competitor.id}
+                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-3 h-3 rounded-full ${getStatusColor(competitor.monitoringEnabled)}`}></div>
+                        <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
+                          <span className="text-sm font-medium">
+                            {competitor.name
+                              .split(" ")
+                              .map((word) => word[0])
+                              .join("")
+                              .toUpperCase()}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <h3 className="font-medium">{competitor.name}</h3>
+                          <Badge variant={getSeverityColor(competitor.severity)} className="text-xs">
+                            {competitor.severity}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                          <span>{competitor.url}</span>
+                          <span>•</span>
+                          <span>{competitor.changeCount} changes</span>
+                          <span>•</span>
+                          <span>Last check: {formatLastCheck(competitor.lastCheckedAt)}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <Button variant="ghost" size="sm" asChild>
+                        <a href={competitor.url} target="_blank" rel="noopener noreferrer">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleToggleMonitoring(competitor.id, competitor.monitoringEnabled)}
+                      >
+                        {competitor.monitoringEnabled ? (
+                          <Eye className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </Button>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <Eye className="h-4 w-4 mr-2" />
+                            View Changes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleMonitoring(competitor.id, competitor.monitoringEnabled)}>
+                            {competitor.monitoringEnabled ? (
+                              <>
+                                <EyeOff className="h-4 w-4 mr-2" />
+                                Pause Monitoring
+                              </>
+                            ) : (
+                              <>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Resume Monitoring
+                              </>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-destructive"
+                            onClick={() => handleDeleteCompetitor(competitor.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </CardContent>
         </Card>
