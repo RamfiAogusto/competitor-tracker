@@ -155,12 +155,8 @@ export default function CompetitorsPage() {
   const handleManualCheck = async (id: string, name: string) => {
     setManualCheckLoading(id)
     try {
-      // Usar diferentes versiones para simular cambios
-      // v1 -> v2 -> v3 -> v2 (ciclo)
-      const versions = ['v1', 'v2', 'v3']
-      const randomVersion = versions[Math.floor(Math.random() * versions.length)]
-      
-      const result = await competitorsApi.manualCheck(id, true, randomVersion)
+      // Ejecutar monitoreo real con HeadlessX
+      const result = await competitorsApi.manualCheck(id, false)
       console.log('Manual check result:', result)
       
       // Mostrar mensaje de éxito

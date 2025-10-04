@@ -178,10 +178,10 @@ class CompetitorsApiClient {
   /**
    * Ejecutar monitoreo manual
    */
-  async manualCheck(id: string, simulate: boolean = true, htmlVersion: string = 'v2'): Promise<{ success: boolean; data: any; message: string }> {
+  async manualCheck(id: string, simulate: boolean = false): Promise<{ success: boolean; data: any; message: string }> {
     return apiClient.request<{ success: boolean; data: any; message: string }>(`${this.baseEndpoint}/${id}/manual-check`, {
       method: 'POST',
-      body: JSON.stringify({ simulate, htmlVersion }),
+      body: JSON.stringify({ simulate }),
     })
   }
 
