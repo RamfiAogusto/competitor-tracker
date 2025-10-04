@@ -17,7 +17,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Plus, MoreHorizontal, ExternalLink, Eye, EyeOff, Trash2, Edit, Globe, Clock } from "lucide-react"
+import { Plus, MoreHorizontal, ExternalLink, Eye, EyeOff, Trash2, Edit, Globe, Clock, Play } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { useState, useEffect } from "react"
 import { competitorsApi, Competitor, CompetitorStats } from "@/lib/competitors-api"
@@ -29,6 +29,7 @@ export default function CompetitorsPage() {
   const [stats, setStats] = useState<CompetitorStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [manualCheckLoading, setManualCheckLoading] = useState<string | null>(null)
   const { isAuthenticated } = useAuth()
 
   // Formulario para agregar competitor
@@ -148,6 +149,41 @@ export default function CompetitorsPage() {
     } catch (err) {
       console.error('Error deleting competitor:', err)
       setError('Error al eliminar el competidor')
+    }
+  }
+
+  const handleManualCheck = async (id: string, name: string) => {
+    setManualCheckLoading(id)
+    try {
+      const result = await competitorsApi.manualCheck(id, true, 'v2')
+      console.log('Manual check result:', result)
+      
+      // Mostrar mensaje de éxito
+      if (result.success) {
+        setError(null)
+        // Recargar datos para mostrar cambios
+        await loadData()
+        
+        // Mostrar notificación temporal
+        const message = result.data.changesDetected 
+          ? `✅ ${result.data.competitorName}: ${result.data.changeCount} cambios detectados (${result.data.severity})`
+          : `ℹ️ ${result.data.competitorName}: No se detectaron cambios`
+        
+        // Crear notificación temporal
+        const notification = document.createElement('div')
+        notification.className = 'fixed top-4 right-4 bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded z-50'
+        notification.textContent = message
+        document.body.appendChild(notification)
+        
+        setTimeout(() => {
+          document.body.removeChild(notification)
+        }, 5000)
+      }
+    } catch (err: any) {
+      console.error('Error en monitoreo manual:', err)
+      setError(err.message || 'Error ejecutando monitoreo manual')
+    } finally {
+      setManualCheckLoading(null)
     }
   }
 
@@ -398,6 +434,20 @@ export default function CompetitorsPage() {
                       <Button 
                         variant="ghost" 
                         size="sm"
+                        onClick={() => handleManualCheck(competitor.id, competitor.name)}
+                        disabled={manualCheckLoading === competitor.id}
+                        title="Ejecutar monitoreo manual"
+                      >
+                        {manualCheckLoading === competitor.id ? (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
+                        ) : (
+                          <Play className="h-4 w-4 text-blue-600" />
+                        )}
+                      </Button>
+
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
                         onClick={() => handleToggleMonitoring(competitor.id, competitor.monitoringEnabled)}
                       >
                         {competitor.monitoringEnabled ? (
@@ -421,6 +471,13 @@ export default function CompetitorsPage() {
                           <DropdownMenuItem>
                             <Eye className="h-4 w-4 mr-2" />
                             View Changes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleManualCheck(competitor.id, competitor.name)}
+                            disabled={manualCheckLoading === competitor.id}
+                          >
+                            <Play className="h-4 w-4 mr-2" />
+                            {manualCheckLoading === competitor.id ? 'Checking...' : 'Manual Check'}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleToggleMonitoring(competitor.id, competitor.monitoringEnabled)}>
                             {competitor.monitoringEnabled ? (
