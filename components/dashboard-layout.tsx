@@ -4,9 +4,17 @@ import type React from "react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Eye, LayoutDashboard, Users, History, Bell, Settings, Menu, Search, User } from "lucide-react"
+import { Eye, LayoutDashboard, Users, History, Bell, Settings, Menu, Search, User, LogOut } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/AuthContext"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -14,6 +22,41 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { user, logout, isAuthenticated, isLoading } = useAuth()
+  const router = useRouter()
+
+  // Redirigir si no está autenticado
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/auth')
+    }
+  }, [isAuthenticated, isLoading, router])
+
+  const handleLogout = async () => {
+    try {
+      await logout()
+      // La redirección se maneja en AuthContext
+    } catch (error) {
+      console.error('Logout error:', error)
+    }
+  }
+
+  // Mostrar loading mientras se verifica la autenticación
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Verificando autenticación...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // No mostrar nada si no está autenticado (se redirigirá)
+  if (!isAuthenticated) {
+    return null
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -46,9 +89,20 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               </Badge>
             </Button>
 
-            <Button variant="ghost" size="sm">
-              <User className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="flex items-center space-x-2">
+                  <User className="h-4 w-4" />
+                  <span className="hidden md:inline">{user?.name || 'Usuario'}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Cerrar Sesión
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </nav>

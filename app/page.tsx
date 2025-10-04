@@ -1,3 +1,8 @@
+"use client"
+
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuth } from '@/contexts/AuthContext'
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -5,6 +10,26 @@ import { ArrowRight, Eye, Bell, History, TrendingUp, Shield, Zap } from "lucide-
 import Link from "next/link"
 
 export default function LandingPage() {
+  const { isAuthenticated, isLoading } = useAuth()
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push('/dashboard')
+    }
+  }, [isAuthenticated, isLoading, router])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Eye className="h-8 w-8 animate-pulse mx-auto mb-4" />
+          <p>Cargando...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -18,10 +43,12 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href="/dashboard">
-                <Button variant="ghost">Dashboard</Button>
+              <Link href="/auth">
+                <Button variant="ghost">Iniciar Sesión</Button>
               </Link>
-              <Button>Get Started</Button>
+              <Link href="/auth">
+                <Button>Get Started</Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -44,7 +71,7 @@ export default function LandingPage() {
               history, and react faster to market movements.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/dashboard">
+              <Link href="/auth">
                 <Button size="lg" className="text-lg px-8">
                   Start Monitoring
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -176,7 +203,7 @@ export default function LandingPage() {
             Join thousands of companies using CompetitorWatch to stay ahead of market changes.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/dashboard">
+            <Link href="/auth">
               <Button size="lg" className="text-lg px-8">
                 Start Free Trial
                 <ArrowRight className="ml-2 h-5 w-5" />
