@@ -54,10 +54,6 @@ export default function NotificationsPage() {
           alertsApi.getStats('7d')
         ])
         
-        // Debug: Log first alert structure
-        if (alertsResponse.data.length > 0) {
-          console.log('Frontend received alert:', JSON.stringify(alertsResponse.data[0], null, 2))
-        }
         
         setAlerts(alertsResponse.data)
         setStats(statsResponse.data)
@@ -428,7 +424,7 @@ export default function NotificationsPage() {
                           <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                             <span className="font-medium">{alert.competitor?.name || 'Competidor desconocido'}</span>
                             <span>•</span>
-                            <span>{formatTimestamp(alert.createdAt)}</span>
+                            <span>{formatTimestamp(alert.created_at)}</span>
                             <span>•</span>
                             <span>{alert.changeCount} cambio{alert.changeCount !== 1 ? 's' : ''}</span>
                           </div>

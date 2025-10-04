@@ -21,8 +21,8 @@ export interface Alert {
   affectedSections?: string[]
   readAt?: string
   archivedAt?: string
-  createdAt: string
-  updatedAt: string
+  created_at: string
+  updated_at: string
   // Relaciones
   competitor?: {
     id: string
