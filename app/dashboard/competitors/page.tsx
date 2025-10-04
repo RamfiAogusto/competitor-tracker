@@ -71,10 +71,17 @@ export default function CompetitorsPage() {
       await competitorsApi.createCompetitor(formData)
       setIsAddDialogOpen(false)
       setFormData({ name: '', url: '', description: '', monitoringEnabled: true })
+      setError(null) // Limpiar errores previos
       await loadData() // Recargar datos
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error creating competitor:', err)
-      setError('Error al crear el competidor')
+      
+      // Usar el mensaje específico del backend si está disponible
+      if (err.message && err.message !== 'HTTP error! status: 409') {
+        setError(err.message)
+      } else {
+        setError('Ya existe un competidor con esta URL. Por favor, usa una URL diferente.')
+      }
     }
   }
 
