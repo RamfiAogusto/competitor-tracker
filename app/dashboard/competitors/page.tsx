@@ -36,7 +36,8 @@ export default function CompetitorsPage() {
     name: '',
     url: '',
     description: '',
-    monitoringEnabled: true
+    monitoringEnabled: true,
+    priority: 'medium' as 'low' | 'medium' | 'high'
   })
 
   // Cargar datos
@@ -70,7 +71,7 @@ export default function CompetitorsPage() {
     try {
       await competitorsApi.createCompetitor(formData)
       setIsAddDialogOpen(false)
-      setFormData({ name: '', url: '', description: '', monitoringEnabled: true })
+      setFormData({ name: '', url: '', description: '', monitoringEnabled: true, priority: 'medium' })
       setError(null) // Limpiar errores previos
       await loadData() // Recargar datos
     } catch (err: any) {
@@ -126,10 +127,8 @@ export default function CompetitorsPage() {
     return `${diffInDays} días atrás`
   }
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case "critical":
-        return "destructive"
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
       case "high":
         return "destructive"
       case "medium":
@@ -220,6 +219,19 @@ export default function CompetitorsPage() {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   />
                 </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="priority">Priority</Label>
+                  <select 
+                    id="priority"
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    value={formData.priority}
+                    onChange={(e) => setFormData({ ...formData, priority: e.target.value as 'low' | 'medium' | 'high' })}
+                  >
+                    <option value="low">Low Priority</option>
+                    <option value="medium">Medium Priority</option>
+                    <option value="high">High Priority</option>
+                  </select>
+                </div>
                 <div className="flex items-center space-x-2">
                   <Switch 
                     id="monitoring" 
@@ -265,12 +277,12 @@ export default function CompetitorsPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">High Severity</CardTitle>
+              <CardTitle className="text-sm font-medium">High Priority</CardTitle>
               <Badge variant="destructive" className="h-4 w-4 rounded-full p-0"></Badge>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats?.highPriority || 0}</div>
-              <p className="text-xs text-muted-foreground">Requires attention</p>
+              <p className="text-xs text-muted-foreground">High priority</p>
             </CardContent>
           </Card>
 
@@ -321,8 +333,8 @@ export default function CompetitorsPage() {
                       <div>
                         <div className="flex items-center space-x-2">
                           <h3 className="font-medium">{competitor.name}</h3>
-                          <Badge variant={getSeverityColor(competitor.severity)} className="text-xs">
-                            {competitor.severity}
+                          <Badge variant={getPriorityColor(competitor.priority)} className="text-xs">
+                            {competitor.priority}
                           </Badge>
                         </div>
                         <div className="flex items-center space-x-4 text-sm text-muted-foreground">

@@ -11,6 +11,7 @@ export interface Competitor {
   description?: string
   monitoringEnabled: boolean
   checkInterval: number
+  priority: 'low' | 'medium' | 'high'
   lastCheckedAt?: string
   totalVersions: number
   lastChangeAt?: string
@@ -28,6 +29,11 @@ export interface CompetitorStats {
   paused: number
   highPriority: number
   avgCheckTime: string
+  priority: {
+    high: number
+    medium: number
+    low: number
+  }
   severity: {
     critical: number
     high: number
