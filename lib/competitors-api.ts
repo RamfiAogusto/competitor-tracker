@@ -176,6 +176,23 @@ class CompetitorsApiClient {
   }
 
   /**
+   * Iniciar monitoreo automático
+   */
+  async startMonitoring(id: string, interval?: number, options?: any): Promise<{ success: boolean; data: any; message: string }> {
+    return apiClient.request<{ success: boolean; data: any; message: string }>(`${this.baseEndpoint}/${id}/start-monitoring`, {
+      method: 'POST',
+      body: JSON.stringify({ interval, options }),
+    })
+  }
+
+  /**
+   * Obtener estado del monitoreo
+   */
+  async getMonitoringStatus(id: string): Promise<{ success: boolean; data: any }> {
+    return apiClient.request<{ success: boolean; data: any }>(`${this.baseEndpoint}/${id}/monitoring-status`)
+  }
+
+  /**
    * Obtener historial de versiones
    */
   async getHistory(id: string, params?: { limit?: number; offset?: number }): Promise<{ success: boolean; data: any[]; pagination: any }> {
