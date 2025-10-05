@@ -1,12 +1,123 @@
+"use client"
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Eye, Bell, TrendingUp, AlertTriangle, Clock, Plus, ExternalLink } from "lucide-react"
+import { Eye, Bell, TrendingUp, AlertTriangle, Clock, Plus, ExternalLink, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { DashboardLayout } from "@/components/dashboard-layout"
+import { dashboardApi, DashboardOverview, RecentChange, TopCompetitor } from "@/lib/dashboard-api"
+import { useEffect, useState } from "react"
 
 export default function DashboardPage() {
+  const [overview, setOverview] = useState<DashboardOverview | null>(null)
+  const [recentChanges, setRecentChanges] = useState<RecentChange[]>([])
+  const [topCompetitors, setTopCompetitors] = useState<TopCompetitor[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Fetch data in parallel
+        const [overviewData, changesData, competitorsData] = await Promise.all([
+          dashboardApi.getOverview(),
+          dashboardApi.getRecentChanges(5),
+          dashboardApi.getTopCompetitors(4)
+        ])
+
+        setOverview(overviewData)
+        setRecentChanges(changesData)
+        setTopCompetitors(competitorsData)
+      } catch (err) {
+        console.error('Error fetching dashboard data:', err)
+        setError('Error al cargar los datos del dashboard')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [])
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (diffMins < 60) {
+      return `hace ${diffMins} minuto${diffMins !== 1 ? 's' : ''}`
+    } else if (diffHours < 24) {
+      return `hace ${diffHours} hora${diffHours !== 1 ? 's' : ''}`
+    } else {
+      return `hace ${diffDays} día${diffDays !== 1 ? 's' : ''}`
+    }
+  }
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'bg-red-500'
+      case 'high': return 'bg-orange-500'
+      case 'medium': return 'bg-yellow-500'
+      case 'low': return 'bg-blue-500'
+      default: return 'bg-green-500'
+    }
+  }
+
+  const getSeverityBadge = (severity: string) => {
+    switch (severity) {
+      case 'critical': return { variant: 'destructive' as const, text: 'Critical' }
+      case 'high': return { variant: 'destructive' as const, text: 'High' }
+      case 'medium': return { variant: 'secondary' as const, text: 'Medium' }
+      case 'low': return { variant: 'outline' as const, text: 'Low' }
+      default: return { variant: 'outline' as const, text: 'Info' }
+    }
+  }
+
+  const getPriorityBadge = (priority: string) => {
+    switch (priority) {
+      case 'high': return { variant: 'destructive' as const, text: 'High' }
+      case 'medium': return { variant: 'secondary' as const, text: 'Medium' }
+      case 'low': return { variant: 'outline' as const, text: 'Low' }
+      default: return { variant: 'outline' as const, text: 'Medium' }
+    }
+  }
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="flex items-center space-x-2">
+            <Loader2 className="h-6 w-6 animate-spin" />
+            <span>Cargando dashboard...</span>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button onClick={() => window.location.reload()}>
+              Reintentar
+            </Button>
+          </div>
+        </div>
+      </DashboardLayout>
+    )
+  }
   return (
     <DashboardLayout>
       <div className="space-y-8">
@@ -32,9 +143,9 @@ export default function DashboardPage() {
               <Eye className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
+              <div className="text-2xl font-bold">{overview?.stats.activeMonitors || 0}</div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-green-600">+2</span> from last month
+                de {overview?.stats.totalCompetitors || 0} competidores totales
               </p>
             </CardContent>
           </Card>
@@ -45,9 +156,9 @@ export default function DashboardPage() {
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">47</div>
+              <div className="text-2xl font-bold">{overview?.stats.totalChanges || 0}</div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-green-600">+12%</span> from last week
+                cambios detectados en total
               </p>
             </CardContent>
           </Card>
@@ -58,21 +169,23 @@ export default function DashboardPage() {
               <AlertTriangle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3</div>
+              <div className="text-2xl font-bold">{overview?.stats.criticalAlerts || 0}</div>
               <p className="text-xs text-muted-foreground">
-                <span className="text-red-600">+1</span> in last 24h
+                alertas críticas pendientes
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Response Time</CardTitle>
+              <CardTitle className="text-sm font-medium">Last Check</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">2.3m</div>
-              <p className="text-xs text-muted-foreground">Average detection time</p>
+              <div className="text-2xl font-bold">
+                {overview?.stats.lastCheck ? formatTimestamp(overview.stats.lastCheck) : 'Nunca'}
+              </div>
+              <p className="text-xs text-muted-foreground">Última verificación</p>
             </CardContent>
           </Card>
         </div>
@@ -96,61 +209,32 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">TechCorp.com</p>
-                    <Badge variant="destructive" className="text-xs">
-                      Critical
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">New pricing page launched</p>
-                  <p className="text-xs text-muted-foreground">2 minutes ago</p>
+              {recentChanges.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <TrendingUp className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No hay cambios recientes</p>
+                  <p className="text-xs">Los cambios aparecerán aquí cuando se detecten</p>
                 </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">StartupXYZ.io</p>
-                    <Badge variant="secondary" className="text-xs">
-                      Medium
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Homepage hero section updated</p>
-                  <p className="text-xs text-muted-foreground">15 minutes ago</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">CompetitorA.com</p>
-                    <Badge variant="outline" className="text-xs">
-                      Low
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Blog post published</p>
-                  <p className="text-xs text-muted-foreground">1 hour ago</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium">RivalBusiness.net</p>
-                    <Badge variant="outline" className="text-xs">
-                      Info
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">Footer links modified</p>
-                  <p className="text-xs text-muted-foreground">3 hours ago</p>
-                </div>
-              </div>
+              ) : (
+                recentChanges.map((change) => {
+                  const severityBadge = getSeverityBadge(change.severity)
+                  return (
+                    <div key={change.id} className="flex items-start space-x-3">
+                      <div className={`w-2 h-2 ${getSeverityColor(change.severity)} rounded-full mt-2 flex-shrink-0`}></div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium">{change.competitorName}</p>
+                          <Badge variant={severityBadge.variant} className="text-xs">
+                            {severityBadge.text}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{change.changeSummary}</p>
+                        <p className="text-xs text-muted-foreground">{formatTimestamp(change.detectedAt)}</p>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
             </CardContent>
           </Card>
 
@@ -171,77 +255,39 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-red-600 dark:text-red-400">TC</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">TechCorp.com</p>
-                    <p className="text-xs text-muted-foreground">23 changes</p>
-                  </div>
+              {topCompetitors.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Eye className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p>No hay competidores activos</p>
+                  <p className="text-xs">Agrega competidores para comenzar el monitoreo</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <Progress value={85} className="w-16 h-2" />
-                  <Badge variant="destructive" className="text-xs">
-                    High
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-blue-600 dark:text-blue-400">SX</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">StartupXYZ.io</p>
-                    <p className="text-xs text-muted-foreground">18 changes</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Progress value={65} className="w-16 h-2" />
-                  <Badge variant="secondary" className="text-xs">
-                    Medium
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-green-600 dark:text-green-400">CA</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">CompetitorA.com</p>
-                    <p className="text-xs text-muted-foreground">12 changes</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Progress value={45} className="w-16 h-2" />
-                  <Badge variant="outline" className="text-xs">
-                    Low
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-purple-100 dark:bg-purple-900/20 rounded-full flex items-center justify-center">
-                    <span className="text-xs font-medium text-purple-600 dark:text-purple-400">RB</span>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">RivalBusiness.net</p>
-                    <p className="text-xs text-muted-foreground">8 changes</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Progress value={30} className="w-16 h-2" />
-                  <Badge variant="outline" className="text-xs">
-                    Low
-                  </Badge>
-                </div>
-              </div>
+              ) : (
+                topCompetitors.map((competitor) => {
+                  const priorityBadge = getPriorityBadge(competitor.priority)
+                  const initials = competitor.name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2)
+                  const progressValue = Math.min((competitor.totalChanges / 20) * 100, 100) // Max 20 changes for 100%
+                  
+                  return (
+                    <div key={competitor.id} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-blue-100 dark:bg-blue-900/20 rounded-full flex items-center justify-center">
+                          <span className="text-xs font-medium text-blue-600 dark:text-blue-400">{initials}</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{competitor.name}</p>
+                          <p className="text-xs text-muted-foreground">{competitor.totalChanges} cambios</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Progress value={progressValue} className="w-16 h-2" />
+                        <Badge variant={priorityBadge.variant} className="text-xs">
+                          {priorityBadge.text}
+                        </Badge>
+                      </div>
+                    </div>
+                  )
+                })
+              )}
             </CardContent>
           </Card>
         </div>
