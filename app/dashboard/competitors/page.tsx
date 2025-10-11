@@ -393,7 +393,8 @@ export default function CompetitorsPage() {
                 competitors.map((competitor) => (
                   <div
                     key={competitor.id}
-                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors"
+                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors cursor-pointer"
+                    onClick={() => window.location.href = `/dashboard/competitors/${competitor.id}`}
                   >
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-3">
@@ -410,7 +411,7 @@ export default function CompetitorsPage() {
                       </div>
                       <div>
                         <div className="flex items-center space-x-2">
-                          <h3 className="font-medium">{competitor.name}</h3>
+                          <h3 className="font-medium hover:text-primary transition-colors">{competitor.name}</h3>
                           <Badge variant={getPriorityColor(competitor.priority)} className="text-xs">
                             {competitor.priority}
                           </Badge>
@@ -425,7 +426,7 @@ export default function CompetitorsPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-2" onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="sm" asChild>
                         <a href={competitor.url} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="h-4 w-4" />
@@ -435,7 +436,10 @@ export default function CompetitorsPage() {
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => handleManualCheck(competitor.id, competitor.name)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleManualCheck(competitor.id, competitor.name)
+                        }}
                         disabled={manualCheckLoading === competitor.id}
                         title="Ejecutar monitoreo manual"
                       >
@@ -449,7 +453,10 @@ export default function CompetitorsPage() {
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={() => handleToggleMonitoring(competitor.id, competitor.monitoringEnabled)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          handleToggleMonitoring(competitor.id, competitor.monitoringEnabled)
+                        }}
                       >
                         {competitor.monitoringEnabled ? (
                           <Eye className="h-4 w-4 text-green-600" />
@@ -460,27 +467,39 @@ export default function CompetitorsPage() {
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
+                          <Button variant="ghost" size="sm" onClick={(e) => e.stopPropagation()}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditCompetitor(competitor)}>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation()
+                            handleEditCompetitor(competitor)
+                          }}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </DropdownMenuItem>
-                          <DropdownMenuItem>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation()
+                            window.location.href = `/dashboard/competitors/${competitor.id}`
+                          }}>
                             <Eye className="h-4 w-4 mr-2" />
-                            View Changes
+                            View Details
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            onClick={() => handleManualCheck(competitor.id, competitor.name)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleManualCheck(competitor.id, competitor.name)
+                            }}
                             disabled={manualCheckLoading === competitor.id}
                           >
                             <Play className="h-4 w-4 mr-2" />
                             {manualCheckLoading === competitor.id ? 'Checking...' : 'Manual Check'}
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleToggleMonitoring(competitor.id, competitor.monitoringEnabled)}>
+                          <DropdownMenuItem onClick={(e) => {
+                            e.stopPropagation()
+                            handleToggleMonitoring(competitor.id, competitor.monitoringEnabled)
+                          }}>
                             {competitor.monitoringEnabled ? (
                               <>
                                 <EyeOff className="h-4 w-4 mr-2" />
@@ -495,7 +514,10 @@ export default function CompetitorsPage() {
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="text-destructive"
-                            onClick={() => handleDeleteCompetitor(competitor.id)}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDeleteCompetitor(competitor.id)
+                            }}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete

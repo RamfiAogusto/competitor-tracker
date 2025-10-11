@@ -16,11 +16,32 @@ export interface Competitor {
   totalVersions: number
   lastChangeAt?: string
   isActive: boolean
-  createdAt: string
-  updatedAt: string
+  created_at: string  // ← Backend retorna snake_case
+  updated_at: string  // ← Backend retorna snake_case
   // Campos calculados
   severity: 'low' | 'medium' | 'high' | 'critical'
   changeCount: number
+  // Alias para compatibilidad
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ChangeHistory {
+  id: string
+  versionNumber: number
+  isFullVersion: boolean
+  isCurrent: boolean
+  changeCount: number
+  changePercentage: number | string  // Viene como string desde Postgres DECIMAL
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  changeType: 'content' | 'design' | 'pricing' | 'feature' | 'other'
+  changeSummary: string
+  created_at: string
+  updated_at: string
+  // Campos opcionales para compatibilidad
+  competitorId?: string
+  timestamp?: string  // Alias de created_at
+  summary?: string  // Alias de changeSummary
 }
 
 export interface CompetitorStats {
@@ -205,7 +226,7 @@ class CompetitorsApiClient {
   /**
    * Obtener historial de versiones
    */
-  async getHistory(id: string, params?: { limit?: number; offset?: number }): Promise<{ success: boolean; data: any[]; pagination: any }> {
+  async getHistory(id: string, params?: { limit?: number; offset?: number }): Promise<{ success: boolean; data: ChangeHistory[]; pagination?: any }> {
     const queryParams = new URLSearchParams()
     
     if (params?.limit) queryParams.append('limit', params.limit.toString())
@@ -213,7 +234,7 @@ class CompetitorsApiClient {
 
     const endpoint = `${this.baseEndpoint}/${id}/history${queryParams.toString() ? `?${queryParams.toString()}` : ''}`
     
-    return apiClient.request<{ success: boolean; data: any[]; pagination: any }>(endpoint)
+    return apiClient.request<{ success: boolean; data: ChangeHistory[]; pagination?: any }>(endpoint)
   }
 }
 
