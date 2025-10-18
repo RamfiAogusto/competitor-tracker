@@ -53,6 +53,17 @@ export default function SettingsPage() {
     }
   }, [user])
 
+  // Check if profile has changes
+  const hasProfileChanges = () => {
+    if (!user) return false
+    return name.trim() !== (user.name || "") || email.trim() !== (user.email || "")
+  }
+
+  // Check if password form is complete
+  const canUpdatePassword = () => {
+    return currentPassword.length > 0 && newPassword.length > 0 && confirmPassword.length > 0
+  }
+
   const handleUpdateProfile = async () => {
     if (!name.trim()) {
       toast({
@@ -267,7 +278,7 @@ export default function SettingsPage() {
 
                 <Button 
                   onClick={handleUpdateProfile} 
-                  disabled={isUpdatingProfile}
+                  disabled={isUpdatingProfile || !hasProfileChanges()}
                 >
                   {isUpdatingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Guardar Cambios
@@ -354,7 +365,7 @@ export default function SettingsPage() {
                 </div>
                 <Button 
                   onClick={handleUpdatePassword}
-                  disabled={isUpdatingPassword}
+                  disabled={isUpdatingPassword || !canUpdatePassword()}
                 >
                   {isUpdatingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Actualizar Contraseña
