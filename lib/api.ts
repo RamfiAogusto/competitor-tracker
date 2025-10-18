@@ -40,6 +40,7 @@ class ApiClient {
     const token = this.getToken()
     
     const config: RequestInit = {
+      credentials: 'include', // Enviar cookies HttpOnly con cada request
       headers: {
         'Content-Type': 'application/json',
         ...(token && { Authorization: `Bearer ${token}` }),
@@ -73,23 +74,17 @@ class ApiClient {
 
   private setTokens(tokens: AuthTokens): void {
     if (typeof window !== 'undefined') {
+      // Solo guardar accessToken en localStorage
+      // El refreshToken viene en cookie HttpOnly desde el backend
       localStorage.setItem('authToken', tokens.accessToken)
-      localStorage.setItem('refreshToken', tokens.refreshToken)
-      
-      // También guardar en cookies para que el middleware pueda acceder
-      document.cookie = `token=${tokens.accessToken}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`
-      document.cookie = `refreshToken=${tokens.refreshToken}; path=/; max-age=${90 * 24 * 60 * 60}; SameSite=Lax`
     }
   }
 
   private clearTokensPrivate(): void {
     if (typeof window !== 'undefined') {
+      // Solo limpiar localStorage
+      // Las cookies HttpOnly se limpian desde el backend en /logout
       localStorage.removeItem('authToken')
-      localStorage.removeItem('refreshToken')
-      
-      // También limpiar las cookies
-      document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-      document.cookie = 'refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
     }
   }
 
@@ -135,21 +130,18 @@ class ApiClient {
   }
 
   async refreshToken(): Promise<AuthTokens> {
-    const refreshToken = typeof window !== 'undefined' 
-      ? localStorage.getItem('refreshToken') 
-      : null
-
-    if (!refreshToken) {
-      throw new Error('No refresh token available')
-    }
-
-    const response = await this.request<{ data: AuthTokens }>('/users/refresh', {
+    // El refreshToken se envía automáticamente en la cookie HttpOnly
+    // No necesitamos enviarlo en el body
+    const response = await this.request<{ data: { tokens: AuthTokens } }>('/users/refresh', {
       method: 'POST',
-      body: JSON.stringify({ refreshToken }),
     })
 
-    this.setTokens(response.data)
-    return response.data
+    // Solo guardamos el nuevo accessToken
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('authToken', response.data.tokens.accessToken)
+    }
+    
+    return response.data.tokens
   }
 
   async getProfile(): Promise<User> {
