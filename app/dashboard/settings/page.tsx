@@ -21,97 +21,229 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { CreditCard, Key, Trash2, Download, Upload, Eye, Moon, Sun } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { CreditCard, Key, Trash2, Download, Upload, Eye, Moon, Sun, Loader2 } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useAuth } from "@/contexts/AuthContext"
+import { apiClient } from "@/lib/api"
+import { useToast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
+  const { user, refreshAuth } = useAuth()
+  const { toast } = useToast()
   const [theme, setTheme] = useState("system")
+  
+  // Profile form state
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
+  
+  // Password form state
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
+
+  // Load user data
+  useEffect(() => {
+    if (user) {
+      setName(user.name || "")
+      setEmail(user.email || "")
+    }
+  }, [user])
+
+  const handleUpdateProfile = async () => {
+    if (!name.trim()) {
+      toast({
+        title: "Error",
+        description: "El nombre es requerido",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsUpdatingProfile(true)
+    try {
+      await apiClient.put('/users/profile', {
+        name: name.trim(),
+        email: email.trim(),
+      })
+
+      // Refresh auth to get updated user data
+      await refreshAuth()
+
+      toast({
+        title: "Éxito",
+        description: "Perfil actualizado correctamente",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Error al actualizar el perfil",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdatingProfile(false)
+    }
+  }
+
+  const handleUpdatePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Todos los campos son requeridos",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Las contraseñas no coinciden",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (newPassword.length < 8) {
+      toast({
+        title: "Error",
+        description: "La contraseña debe tener al menos 8 caracteres",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsUpdatingPassword(true)
+    try {
+      await apiClient.put('/users/profile', {
+        currentPassword,
+        password: newPassword,
+      })
+
+      // Clear password fields
+      setCurrentPassword("")
+      setNewPassword("")
+      setConfirmPassword("")
+
+      toast({
+        title: "Éxito",
+        description: "Contraseña actualizada correctamente",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Error al actualizar la contraseña",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUpdatingPassword(false)
+    }
+  }
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }
 
   return (
     <DashboardLayout>
       <div className="space-y-8">
         {/* Header */}
         <div>
-          <h1 className="text-3xl font-bold">Settings</h1>
-          <p className="text-muted-foreground">Manage your account settings and preferences</p>
+          <h1 className="text-3xl font-bold">Configuración</h1>
+          <p className="text-muted-foreground">Administra tu cuenta y preferencias</p>
         </div>
 
         <Tabs defaultValue="profile" className="space-y-6">
           <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="monitoring">Monitoring</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="billing">Billing</TabsTrigger>
-            <TabsTrigger value="advanced">Advanced</TabsTrigger>
+            <TabsTrigger value="profile">Perfil</TabsTrigger>
+            <TabsTrigger value="monitoring">Monitoreo</TabsTrigger>
+            <TabsTrigger value="security">Seguridad</TabsTrigger>
+            <TabsTrigger value="billing">Facturación</TabsTrigger>
+            <TabsTrigger value="advanced">Avanzado</TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Profile Information</CardTitle>
-                <CardDescription>Update your personal information and preferences</CardDescription>
+                <CardTitle>Información del Perfil</CardTitle>
+                <CardDescription>Actualiza tu información personal</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="flex items-center space-x-4">
                   <Avatar className="h-20 w-20">
-                    <AvatarImage src="/placeholder.svg" />
-                    <AvatarFallback>JD</AvatarFallback>
+                    <AvatarFallback className="text-2xl">
+                      {user?.name ? getInitials(user.name) : 'U'}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="space-y-2">
-                    <Button variant="outline" size="sm">
+                    <Button variant="outline" size="sm" disabled>
                       <Upload className="h-4 w-4 mr-2" />
-                      Change Avatar
+                      Cambiar Avatar
                     </Button>
-                    <p className="text-xs text-muted-foreground">JPG, PNG or GIF. Max size 2MB.</p>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="first-name">First Name</Label>
-                    <Input id="first-name" defaultValue="John" />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="last-name">Last Name</Label>
-                    <Input id="last-name" defaultValue="Doe" />
+                    <p className="text-xs text-muted-foreground">Próximamente disponible</p>
                   </div>
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="email">Email Address</Label>
-                  <Input id="email" type="email" defaultValue="john.doe@company.com" />
+                  <Label htmlFor="name">Nombre Completo</Label>
+                  <Input 
+                    id="name" 
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Tu nombre"
+                  />
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="company">Company</Label>
-                  <Input id="company" defaultValue="Acme Corp" />
+                  <Label htmlFor="email">Email</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="tu@email.com"
+                  />
+                </div>
+
+                <Alert>
+                  <AlertDescription>
+                    Las siguientes opciones estarán disponibles próximamente: Empresa, Bio, Zona horaria y Tema.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="grid gap-2">
+                  <Label htmlFor="company" className="text-muted-foreground">Empresa</Label>
+                  <Input id="company" disabled placeholder="Próximamente" />
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea id="bio" placeholder="Tell us about yourself..." />
+                  <Label htmlFor="bio" className="text-muted-foreground">Bio</Label>
+                  <Textarea id="bio" disabled placeholder="Próximamente" />
                 </div>
 
                 <div className="grid gap-2">
-                  <Label htmlFor="timezone">Timezone</Label>
-                  <Select defaultValue="utc-5">
+                  <Label htmlFor="timezone" className="text-muted-foreground">Zona Horaria</Label>
+                  <Select disabled>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Próximamente" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="utc-8">Pacific Time (UTC-8)</SelectItem>
-                      <SelectItem value="utc-7">Mountain Time (UTC-7)</SelectItem>
-                      <SelectItem value="utc-6">Central Time (UTC-6)</SelectItem>
-                      <SelectItem value="utc-5">Eastern Time (UTC-5)</SelectItem>
-                      <SelectItem value="utc+0">UTC</SelectItem>
+                      <SelectItem value="disabled">Próximamente</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <Label htmlFor="theme">Theme</Label>
-                  <Select value={theme} onValueChange={setTheme}>
+                  <Label htmlFor="theme" className="text-muted-foreground">Tema</Label>
+                  <Select value={theme} onValueChange={setTheme} disabled>
                     <SelectTrigger className="w-32">
                       <SelectValue />
                     </SelectTrigger>
@@ -119,21 +251,27 @@ export default function SettingsPage() {
                       <SelectItem value="light">
                         <div className="flex items-center">
                           <Sun className="h-4 w-4 mr-2" />
-                          Light
+                          Claro
                         </div>
                       </SelectItem>
                       <SelectItem value="dark">
                         <div className="flex items-center">
                           <Moon className="h-4 w-4 mr-2" />
-                          Dark
+                          Oscuro
                         </div>
                       </SelectItem>
-                      <SelectItem value="system">System</SelectItem>
+                      <SelectItem value="system">Sistema</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <Button>Save Changes</Button>
+                <Button 
+                  onClick={handleUpdateProfile} 
+                  disabled={isUpdatingProfile}
+                >
+                  {isUpdatingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Guardar Cambios
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -141,92 +279,37 @@ export default function SettingsPage() {
           <TabsContent value="monitoring" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Monitoring Preferences</CardTitle>
-                <CardDescription>Configure how your competitors are monitored</CardDescription>
+                <CardTitle>Preferencias de Monitoreo</CardTitle>
+                <CardDescription>Configura cómo se monitorean tus competidores</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
+                <Alert>
+                  <AlertDescription>
+                    Esta sección estará disponible próximamente.
+                  </AlertDescription>
+                </Alert>
+
+                <div className="flex items-center justify-between opacity-50">
                   <div>
-                    <Label htmlFor="auto-monitoring">Auto-start monitoring</Label>
-                    <p className="text-sm text-muted-foreground">Automatically start monitoring new competitors</p>
+                    <Label htmlFor="auto-monitoring">Auto-iniciar monitoreo</Label>
+                    <p className="text-sm text-muted-foreground">Iniciar monitoreo automáticamente en nuevos competidores</p>
                   </div>
-                  <Switch id="auto-monitoring" defaultChecked />
+                  <Switch id="auto-monitoring" disabled />
                 </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="check-frequency">Check Frequency</Label>
-                  <Select defaultValue="5">
+                <div className="grid gap-2 opacity-50">
+                  <Label htmlFor="check-frequency">Frecuencia de Verificación</Label>
+                  <Select disabled>
                     <SelectTrigger>
-                      <SelectValue />
+                      <SelectValue placeholder="Próximamente" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="1">Every minute</SelectItem>
-                      <SelectItem value="5">Every 5 minutes</SelectItem>
-                      <SelectItem value="15">Every 15 minutes</SelectItem>
-                      <SelectItem value="30">Every 30 minutes</SelectItem>
-                      <SelectItem value="60">Every hour</SelectItem>
+                      <SelectItem value="5">Cada 5 minutos</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="screenshot-capture">Screenshot Capture</Label>
-                    <p className="text-sm text-muted-foreground">Automatically capture screenshots of changes</p>
-                  </div>
-                  <Switch id="screenshot-capture" defaultChecked />
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label htmlFor="content-analysis">Deep Content Analysis</Label>
-                    <p className="text-sm text-muted-foreground">Analyze text changes and semantic meaning</p>
-                  </div>
-                  <Switch id="content-analysis" />
-                </div>
-
-                <div className="grid gap-2">
-                  <Label htmlFor="retention-period">Data Retention Period</Label>
-                  <Select defaultValue="365">
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="30">30 days</SelectItem>
-                      <SelectItem value="90">90 days</SelectItem>
-                      <SelectItem value="180">6 months</SelectItem>
-                      <SelectItem value="365">1 year</SelectItem>
-                      <SelectItem value="unlimited">Unlimited</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Button>Save Preferences</Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Usage Statistics</CardTitle>
-                <CardDescription>Current usage and limits</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Monitored Competitors</span>
-                  <Badge variant="outline">4 / 10</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Monthly Checks</span>
-                  <Badge variant="outline">12,847 / 50,000</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">Storage Used</span>
-                  <Badge variant="outline">2.3 GB / 10 GB</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm">API Calls</span>
-                  <Badge variant="outline">1,234 / 10,000</Badge>
-                </div>
+                <Button disabled>Guardar Preferencias</Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -234,92 +317,87 @@ export default function SettingsPage() {
           <TabsContent value="security" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Password & Authentication</CardTitle>
-                <CardDescription>Manage your account security settings</CardDescription>
+                <CardTitle>Contraseña</CardTitle>
+                <CardDescription>Cambia tu contraseña</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="current-password">Current Password</Label>
-                  <Input id="current-password" type="password" />
+                  <Label htmlFor="current-password">Contraseña Actual</Label>
+                  <Input 
+                    id="current-password" 
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    autoComplete="current-password"
+                  />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input id="new-password" type="password" />
+                  <Label htmlFor="new-password">Nueva Contraseña</Label>
+                  <Input 
+                    id="new-password" 
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
+                  <p className="text-xs text-muted-foreground">Mínimo 8 caracteres</p>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                  <Input id="confirm-password" type="password" />
+                  <Label htmlFor="confirm-password">Confirmar Nueva Contraseña</Label>
+                  <Input 
+                    id="confirm-password" 
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
+                  />
                 </div>
-                <Button>Update Password</Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Two-Factor Authentication</CardTitle>
-                <CardDescription>Add an extra layer of security to your account</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Label>Two-Factor Authentication</Label>
-                    <p className="text-sm text-muted-foreground">Secure your account with 2FA</p>
-                  </div>
-                  <Button variant="outline">Enable 2FA</Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>API Keys</CardTitle>
-                <CardDescription>Manage API keys for integrations</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Production API Key</p>
-                    <p className="text-sm text-muted-foreground">Created on Jan 10, 2025</p>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="sm">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <Button variant="outline">
-                  <Key className="h-4 w-4 mr-2" />
-                  Generate New Key
+                <Button 
+                  onClick={handleUpdatePassword}
+                  disabled={isUpdatingPassword}
+                >
+                  {isUpdatingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Actualizar Contraseña
                 </Button>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle>Login Sessions</CardTitle>
-                <CardDescription>Manage your active login sessions</CardDescription>
+                <CardTitle>Autenticación de Dos Factores</CardTitle>
+                <CardDescription>Agrega una capa extra de seguridad</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-lg">
+                <Alert>
+                  <AlertDescription>
+                    Esta funcionalidad estará disponible próximamente.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex items-center justify-between opacity-50">
                   <div>
-                    <p className="font-medium">Current Session</p>
-                    <p className="text-sm text-muted-foreground">Chrome on macOS • San Francisco, CA</p>
+                    <Label>Autenticación de Dos Factores</Label>
+                    <p className="text-sm text-muted-foreground">Protege tu cuenta con 2FA</p>
                   </div>
-                  <Badge variant="outline">Active</Badge>
+                  <Button variant="outline" disabled>Habilitar 2FA</Button>
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">Mobile App</p>
-                    <p className="text-sm text-muted-foreground">iOS App • Last seen 2 hours ago</p>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    Revoke
-                  </Button>
-                </div>
-                <Button variant="outline">Revoke All Sessions</Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Claves API</CardTitle>
+                <CardDescription>Administra claves API para integraciones</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Alert>
+                  <AlertDescription>
+                    Esta funcionalidad estará disponible próximamente.
+                  </AlertDescription>
+                </Alert>
+                <Button variant="outline" disabled>
+                  <Key className="h-4 w-4 mr-2" />
+                  Generar Nueva Clave
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -327,85 +405,27 @@ export default function SettingsPage() {
           <TabsContent value="billing" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Current Plan</CardTitle>
-                <CardDescription>Manage your subscription and billing</CardDescription>
+                <CardTitle>Plan Actual</CardTitle>
+                <CardDescription>Administra tu suscripción y facturación</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div>
-                    <h3 className="font-semibold">Professional Plan</h3>
-                    <p className="text-sm text-muted-foreground">$49/month • Billed monthly</p>
-                  </div>
-                  <Badge>Active</Badge>
-                </div>
+                <Alert>
+                  <AlertDescription>
+                    El sistema de facturación estará disponible próximamente.
+                  </AlertDescription>
+                </Alert>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center p-4 border rounded-lg">
-                    <div className="text-2xl font-bold">10</div>
-                    <div className="text-sm text-muted-foreground">Competitors</div>
+                <div className="flex items-center justify-between p-4 border rounded-lg opacity-50">
+                  <div>
+                    <h3 className="font-semibold">Plan Gratuito</h3>
+                    <p className="text-sm text-muted-foreground">Acceso básico</p>
                   </div>
-                  <div className="text-center p-4 border rounded-lg">
-                    <div className="text-2xl font-bold">50K</div>
-                    <div className="text-sm text-muted-foreground">Monthly Checks</div>
-                  </div>
-                  <div className="text-center p-4 border rounded-lg">
-                    <div className="text-2xl font-bold">10GB</div>
-                    <div className="text-sm text-muted-foreground">Storage</div>
-                  </div>
+                  <Badge variant="outline">Activo</Badge>
                 </div>
 
                 <div className="flex space-x-2">
-                  <Button>Upgrade Plan</Button>
-                  <Button variant="outline">Change Billing</Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Payment Method</CardTitle>
-                <CardDescription>Manage your payment information</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <CreditCard className="h-8 w-8 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">•••• •••• •••• 4242</p>
-                      <p className="text-sm text-muted-foreground">Expires 12/26</p>
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    Edit
-                  </Button>
-                </div>
-                <Button variant="outline">Add Payment Method</Button>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Billing History</CardTitle>
-                <CardDescription>Download your invoices and payment history</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">January 2025</p>
-                    <p className="text-sm text-muted-foreground">$49.00 • Paid</p>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="flex items-center justify-between p-3 border rounded-lg">
-                  <div>
-                    <p className="font-medium">December 2024</p>
-                    <p className="text-sm text-muted-foreground">$49.00 • Paid</p>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <Download className="h-4 w-4" />
-                  </Button>
+                  <Button disabled>Mejorar Plan</Button>
+                  <Button variant="outline" disabled>Cambiar Facturación</Button>
                 </div>
               </CardContent>
             </Card>
@@ -414,18 +434,23 @@ export default function SettingsPage() {
           <TabsContent value="advanced" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Data Export</CardTitle>
-                <CardDescription>Export your data and monitoring history</CardDescription>
+                <CardTitle>Exportar Datos</CardTitle>
+                <CardDescription>Exporta tus datos e historial de monitoreo</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
+                <Alert>
+                  <AlertDescription>
+                    Esta funcionalidad estará disponible próximamente.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex items-center justify-between opacity-50">
                   <div>
-                    <Label>Export All Data</Label>
-                    <p className="text-sm text-muted-foreground">Download all your monitoring data and history</p>
+                    <Label>Exportar Todos los Datos</Label>
+                    <p className="text-sm text-muted-foreground">Descarga todos tus datos de monitoreo</p>
                   </div>
-                  <Button variant="outline">
+                  <Button variant="outline" disabled>
                     <Download className="h-4 w-4 mr-2" />
-                    Export
+                    Exportar
                   </Button>
                 </div>
               </CardContent>
@@ -433,26 +458,31 @@ export default function SettingsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Integrations</CardTitle>
-                <CardDescription>Connect with external tools and services</CardDescription>
+                <CardTitle>Integraciones</CardTitle>
+                <CardDescription>Conecta con herramientas y servicios externos</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between p-3 border rounded-lg">
+                <Alert>
+                  <AlertDescription>
+                    Las integraciones estarán disponibles próximamente.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex items-center justify-between p-3 border rounded-lg opacity-50">
                   <div>
                     <p className="font-medium">Slack</p>
-                    <p className="text-sm text-muted-foreground">Send alerts to Slack channels</p>
+                    <p className="text-sm text-muted-foreground">Enviar alertas a canales de Slack</p>
                   </div>
-                  <Button variant="outline" size="sm">
-                    Connect
+                  <Button variant="outline" size="sm" disabled>
+                    Conectar
                   </Button>
                 </div>
-                <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div className="flex items-center justify-between p-3 border rounded-lg opacity-50">
                   <div>
                     <p className="font-medium">Zapier</p>
-                    <p className="text-sm text-muted-foreground">Automate workflows with Zapier</p>
+                    <p className="text-sm text-muted-foreground">Automatiza flujos de trabajo</p>
                   </div>
-                  <Button variant="outline" size="sm">
-                    Connect
+                  <Button variant="outline" size="sm" disabled>
+                    Conectar
                   </Button>
                 </div>
               </CardContent>
@@ -460,37 +490,23 @@ export default function SettingsPage() {
 
             <Card className="border-destructive">
               <CardHeader>
-                <CardTitle className="text-destructive">Danger Zone</CardTitle>
-                <CardDescription>Irreversible and destructive actions</CardDescription>
+                <CardTitle className="text-destructive">Zona de Peligro</CardTitle>
+                <CardDescription>Acciones irreversibles y destructivas</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
+                <Alert>
+                  <AlertDescription>
+                    Esta funcionalidad estará disponible próximamente.
+                  </AlertDescription>
+                </Alert>
+                <div className="flex items-center justify-between opacity-50">
                   <div>
-                    <Label>Delete Account</Label>
+                    <Label>Eliminar Cuenta</Label>
                     <p className="text-sm text-muted-foreground">
-                      Permanently delete your account and all associated data
+                      Elimina permanentemente tu cuenta y todos los datos asociados
                     </p>
                   </div>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive">Delete Account</Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete your account and remove all your
-                          data from our servers.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                          Delete Account
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                  <Button variant="destructive" disabled>Eliminar Cuenta</Button>
                 </div>
               </CardContent>
             </Card>
