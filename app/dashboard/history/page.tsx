@@ -88,41 +88,7 @@ export default function HistoryPage() {
   // Estado separado para el input de búsqueda (con debounce)
   const [searchInput, setSearchInput] = useState('')
 
-  // Cargar datos
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData()
-    }
-  }, [isAuthenticated, filters.page])
-
-  // Recargar datos cuando cambien los filtros (excepto page y search)
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData()
-    }
-  }, [filters.competitorId, filters.type, filters.severity])
-
-  // Debounce para el campo de búsqueda
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setFilters(prev => ({
-        ...prev,
-        search: searchInput,
-        page: 1 // Reset page when search changes
-      }))
-    }, 500) // 500ms de delay
-
-    return () => clearTimeout(timer)
-  }, [searchInput])
-
-  // Cargar datos cuando cambie el filtro de búsqueda (después del debounce)
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadData()
-    }
-  }, [filters.search])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -153,7 +119,27 @@ export default function HistoryPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters])
+
+  // Debounce para el campo de búsqueda
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters(prev => ({
+        ...prev,
+        search: searchInput,
+        page: 1 // Reset page when search changes
+      }))
+    }, 500) // 500ms de delay
+
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  // Cargar datos cuando cambien los filtros
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadData()
+    }
+  }, [isAuthenticated, loadData])
 
   const handleFilterChange = (key: keyof GetChangesParams, value: string) => {
     setFilters(prev => ({
