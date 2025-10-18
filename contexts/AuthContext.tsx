@@ -50,8 +50,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Logout error:', error)
     } finally {
       setUser(null)
-      // Redirigir a la página de login después del logout
-      router.push('/auth')
+      // Redirigir a la landing page después del logout
+      router.push('/')
     }
   }
 
@@ -68,8 +68,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Limpiar tokens si falla la verificación
       apiClient.clearTokens()
       setUser(null)
-      // Redirigir a login si el token es inválido
-      router.push('/auth')
+      // No redirigir automáticamente, dejar que el middleware maneje las rutas protegidas
     }
   }
 

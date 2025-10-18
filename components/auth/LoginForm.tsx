@@ -42,7 +42,10 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
     setError('')
     try {
       await login(data.email, data.password)
-      router.push('/dashboard')
+      // La redirección se maneja en /auth/page.tsx con el parámetro redirect
+      const searchParams = new URLSearchParams(window.location.search)
+      const redirectTo = searchParams.get('redirect') || '/dashboard'
+      router.push(redirectTo)
     } catch (error: any) {
       setError(error.message || 'Error al iniciar sesión')
     }
@@ -58,7 +61,7 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" autoComplete="on">
             <FormField
               control={form.control}
               name="email"
@@ -68,6 +71,8 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
                   <FormControl>
                     <Input
                       type="email"
+                      name="email"
+                      autoComplete="email"
                       placeholder="tu@email.com"
                       {...field}
                     />
@@ -87,6 +92,8 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
                     <div className="relative">
                       <Input
                         type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        autoComplete="current-password"
                         placeholder="Tu contraseña"
                         {...field}
                       />

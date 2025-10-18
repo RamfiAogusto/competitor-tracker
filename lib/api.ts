@@ -75,6 +75,10 @@ class ApiClient {
     if (typeof window !== 'undefined') {
       localStorage.setItem('authToken', tokens.accessToken)
       localStorage.setItem('refreshToken', tokens.refreshToken)
+      
+      // También guardar en cookies para que el middleware pueda acceder
+      document.cookie = `token=${tokens.accessToken}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`
+      document.cookie = `refreshToken=${tokens.refreshToken}; path=/; max-age=${90 * 24 * 60 * 60}; SameSite=Lax`
     }
   }
 
@@ -82,6 +86,10 @@ class ApiClient {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('authToken')
       localStorage.removeItem('refreshToken')
+      
+      // También limpiar las cookies
+      document.cookie = 'token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
+      document.cookie = 'refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
     }
   }
 

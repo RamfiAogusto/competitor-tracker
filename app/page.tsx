@@ -10,14 +10,8 @@ import { ArrowRight, Eye, Bell, History, TrendingUp, Shield, Zap } from "lucide-
 import Link from "next/link"
 
 export default function LandingPage() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { isAuthenticated, isLoading, logout } = useAuth()
   const router = useRouter()
-
-  useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.push('/dashboard')
-    }
-  }, [isAuthenticated, isLoading, router])
 
   if (isLoading) {
     return (
@@ -37,18 +31,34 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
+              <Link href="/" className="flex items-center space-x-2">
                 <Eye className="h-8 w-8 text-primary" />
                 <span className="text-xl font-bold">CompetitorWatch</span>
-              </div>
+              </Link>
             </div>
             <div className="flex items-center space-x-4">
-              <Link href="/auth">
-                <Button variant="ghost">Iniciar Sesión</Button>
-              </Link>
-              <Link href="/auth">
-                <Button>Get Started</Button>
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <Link href="/dashboard">
+                    <Button variant="ghost">Dashboard</Button>
+                  </Link>
+                  <Link href="/dashboard/settings">
+                    <Button variant="ghost">Mi Cuenta</Button>
+                  </Link>
+                  <Button variant="outline" onClick={() => logout()}>
+                    Cerrar Sesión
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Link href="/auth">
+                    <Button variant="ghost">Iniciar Sesión</Button>
+                  </Link>
+                  <Link href="/auth">
+                    <Button>Get Started</Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         </div>

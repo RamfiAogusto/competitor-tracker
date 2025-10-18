@@ -1,12 +1,39 @@
 "use client"
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Eye } from 'lucide-react'
 import { LoginForm } from '@/components/auth/LoginForm'
 import { RegisterForm } from '@/components/auth/RegisterForm'
+import { useAuth } from '@/contexts/AuthContext'
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true)
+  const { isAuthenticated, isLoading } = useAuth()
+  const router = useRouter()
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      const redirectTo = searchParams.get('redirect') || '/dashboard'
+      router.push(redirectTo)
+    }
+  }, [isAuthenticated, isLoading, router, searchParams])
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Eye className="h-8 w-8 animate-pulse mx-auto mb-4" />
+          <p>Cargando...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (isAuthenticated) {
+    return null // Will redirect in useEffect
+  }
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
