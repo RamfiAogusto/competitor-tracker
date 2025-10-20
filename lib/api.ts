@@ -1,6 +1,21 @@
 // Configuración de la API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002/api'
 
+// Helper para obtener el avatar del usuario (prioridad: customAvatar > avatar de Google)
+export function getUserAvatar(user: User | null): string | undefined {
+  if (!user) return undefined
+  // Prioridad 1: Avatar personalizado
+  if (user.customAvatar) {
+    // Si es una URL relativa, agregar el base URL del backend
+    if (user.customAvatar.startsWith('/')) {
+      return `${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '') || 'http://localhost:3002'}${user.customAvatar}`
+    }
+    return user.customAvatar
+  }
+  // Prioridad 2: Avatar de Google
+  return user.avatar || undefined
+}
+
 // Tipos para autenticación
 export interface User {
   id: string
@@ -9,6 +24,9 @@ export interface User {
   role: 'user' | 'admin'
   isActive: boolean
   emailVerified: boolean
+  avatar?: string | null
+  customAvatar?: string | null
+  googleId?: string | null
 }
 
 export interface AuthTokens {
@@ -147,6 +165,35 @@ class ApiClient {
   async getProfile(): Promise<User> {
     const response = await this.request<{ data: User }>('/users/profile')
     return response.data
+  }
+
+  async uploadAvatar(file: File): Promise<{ success: boolean; data: { avatarUrl: string; user: User } }> {
+    const token = this.getToken()
+    const formData = new FormData()
+    formData.append('avatar', file)
+
+    const response = await fetch(`${this.baseURL}/users/avatar`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        ...(token && { Authorization: `Bearer ${token}` })
+      },
+      body: formData
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || 'Error al subir avatar')
+    }
+
+    return response.json()
+  }
+
+  async deleteAvatar(): Promise<{ success: boolean; data: { user: User } }> {
+    const response = await this.request<{ success: boolean; data: { user: User } }>('/users/avatar', {
+      method: 'DELETE'
+    })
+    return response
   }
 
   // Verificar si el usuario está autenticado

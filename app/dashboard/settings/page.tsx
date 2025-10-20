@@ -24,20 +24,27 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CreditCard, Key, Trash2, Download, Upload, Eye, Moon, Sun, Loader2 } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard-layout"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useAuth } from "@/contexts/AuthContext"
-import { apiClient } from "@/lib/api"
+import { apiClient, getUserAvatar } from "@/lib/api"
 import { useToast } from "@/hooks/use-toast"
 
 export default function SettingsPage() {
   const { user, refreshAuth } = useAuth()
   const { toast } = useToast()
   const [theme, setTheme] = useState("system")
+  const fileInputRef = useRef<HTMLInputElement>(null)
   
   // Profile form state
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
+  
+  // Avatar state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false)
+  const [isDeletingAvatar, setIsDeletingAvatar] = useState(false)
   
   // Password form state
   const [currentPassword, setCurrentPassword] = useState("")
@@ -96,6 +103,106 @@ export default function SettingsPage() {
       })
     } finally {
       setIsUpdatingProfile(false)
+    }
+  }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validar tipo de archivo
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif']
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Error",
+        description: "Tipo de archivo no permitido. Solo se permiten imágenes (JPG, PNG, WEBP, GIF)",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Validar tamaño (5MB máximo)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "Error",
+        description: "El archivo es demasiado grande. El tamaño máximo es 5MB",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setSelectedFile(file)
+    
+    // Crear preview
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      setPreviewUrl(reader.result as string)
+    }
+    reader.readAsDataURL(file)
+  }
+
+  const handleUploadAvatar = async () => {
+    if (!selectedFile) return
+
+    setIsUploadingAvatar(true)
+    try {
+      await apiClient.uploadAvatar(selectedFile)
+      
+      // Refresh auth to get updated user data
+      await refreshAuth()
+
+      toast({
+        title: "Éxito",
+        description: "Avatar actualizado correctamente",
+      })
+
+      // Limpiar estado
+      setSelectedFile(null)
+      setPreviewUrl(null)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Error al subir el avatar",
+        variant: "destructive",
+      })
+    } finally {
+      setIsUploadingAvatar(false)
+    }
+  }
+
+  const handleDeleteAvatar = async () => {
+    if (!user?.customAvatar) return
+
+    setIsDeletingAvatar(true)
+    try {
+      await apiClient.deleteAvatar()
+      
+      // Refresh auth to get updated user data
+      await refreshAuth()
+
+      toast({
+        title: "Éxito",
+        description: "Avatar eliminado correctamente",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Error al eliminar el avatar",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDeletingAvatar(false)
+    }
+  }
+
+  const handleCancelUpload = () => {
+    setSelectedFile(null)
+    setPreviewUrl(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
     }
   }
 
@@ -188,18 +295,103 @@ export default function SettingsPage() {
                 <CardDescription>Actualiza tu información personal</CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="flex items-center space-x-4">
-                  <Avatar className="h-20 w-20">
-                    <AvatarFallback className="text-2xl">
-                      {user?.name ? getInitials(user.name) : 'U'}
-                    </AvatarFallback>
-                  </Avatar>
+                <div className="flex items-start space-x-4">
                   <div className="space-y-2">
-                    <Button variant="outline" size="sm" disabled>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Cambiar Avatar
-                    </Button>
-                    <p className="text-xs text-muted-foreground">Próximamente disponible</p>
+                    <Avatar className="h-20 w-20">
+                      <AvatarImage 
+                        src={previewUrl || getUserAvatar(user)} 
+                        alt={user?.name || 'Usuario'}
+                      />
+                      <AvatarFallback className="text-2xl">
+                        {user?.name ? getInitials(user.name) : 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    {user?.customAvatar && (
+                      <Badge variant="secondary" className="text-xs">Personalizado</Badge>
+                    )}
+                    {user?.googleId && !user?.customAvatar && (
+                      <Badge variant="secondary" className="text-xs">Google</Badge>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                    {!selectedFile ? (
+                      <div className="space-y-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={isUploadingAvatar || isDeletingAvatar}
+                        >
+                          <Upload className="h-4 w-4 mr-2" />
+                          Cambiar Avatar
+                        </Button>
+                        {user?.customAvatar && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={handleDeleteAvatar}
+                            disabled={isUploadingAvatar || isDeletingAvatar}
+                          >
+                            {isDeletingAvatar ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Eliminando...
+                              </>
+                            ) : (
+                              <>
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Eliminar Avatar
+                              </>
+                            )}
+                          </Button>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          JPG, PNG, WEBP o GIF. Máximo 5MB
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium">Vista previa:</p>
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="default" 
+                            size="sm"
+                            onClick={handleUploadAvatar}
+                            disabled={isUploadingAvatar}
+                          >
+                            {isUploadingAvatar ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Subiendo...
+                              </>
+                            ) : (
+                              <>
+                                <Upload className="h-4 w-4 mr-2" />
+                                Subir Avatar
+                              </>
+                            )}
+                          </Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={handleCancelUpload}
+                            disabled={isUploadingAvatar}
+                          >
+                            Cancelar
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
 

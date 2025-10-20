@@ -4,11 +4,13 @@ import type React from "react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Eye, LayoutDashboard, Users, History, Bell, Settings, Menu, Search, User, LogOut } from "lucide-react"
 import Link from "next/link"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
+import { getUserAvatar } from "@/lib/api"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -92,7 +94,15 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="flex items-center space-x-2">
-                  <User className="h-4 w-4" />
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage 
+                      src={getUserAvatar(user)} 
+                      alt={user?.name || 'Usuario'}
+                    />
+                    <AvatarFallback className="text-xs">
+                      {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+                    </AvatarFallback>
+                  </Avatar>
                   <span className="hidden md:inline">{user?.name || 'Usuario'}</span>
                 </Button>
               </DropdownMenuTrigger>
