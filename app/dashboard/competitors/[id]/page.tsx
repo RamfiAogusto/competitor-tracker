@@ -613,11 +613,11 @@ export default function CompetitorDetailPage() {
                                   <span>{change.changeCount} cambios</span>
                                   <span>•</span>
                                   <span>{Number(change.changePercentage || 0).toFixed(1)}% modificado</span>
-                                  {change.isFullVersion && (
-                                    <>
-                                      <span>•</span>
-                                      <span className="font-medium text-primary">Versión completa</span>
-                                    </>
+                                  <span>•</span>
+                                  {change.isFullVersion ? (
+                                    <span className="font-medium text-primary">Versión completa</span>
+                                  ) : (
+                                    <span className="font-medium text-muted-foreground">Versión parcial</span>
                                   )}
                                 </div>
                               </div>
