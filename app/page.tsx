@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ArrowRight, Eye, Bell, History, TrendingUp, Shield, Zap } from "lucide-react"
 import Link from "next/link"
+import SplineHero from "@/components/SplineHero"
 
 export default function LandingPage() {
   const { isAuthenticated, isLoading, logout } = useAuth()
@@ -65,31 +66,42 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden min-h-screen">
         <div className="grid-pattern absolute inset-0"></div>
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-          <div className="text-center">
-            <Badge variant="secondary" className="mb-4">
-              <Zap className="h-3 w-3 mr-1" />
-              Real-time monitoring
-            </Badge>
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 text-balance">
-              Never miss a <span className="text-primary">competitor move</span> again.
-            </h1>
-            <p className="text-xl text-muted-foreground mb-8 max-w-3xl mx-auto text-pretty">
-              Track your competitors' website changes in real-time. Get instant notifications, maintain detailed change
-              history, and react faster to market movements.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/auth">
-                <Button size="lg" className="text-lg px-8">
-                  Start Monitoring
-                  <ArrowRight className="ml-2 h-5 w-5" />
+        
+        {/* Spline Background - Full Section */}
+        <div className="absolute inset-0 z-0">
+          <SplineHero className="w-full h-full" />
+          {/* Subtle overlay for better text readability - only on left side */}
+          <div className="absolute inset-0 bg-gradient-to-r from-background/60 via-background/20 to-transparent pointer-events-none"></div>
+        </div>
+        
+        {/* Content - Positioned absolutely to avoid blocking Spline */}
+        <div className="absolute inset-0 z-10 pointer-events-none">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center">
+            <div className="w-full lg:w-1/2">
+              <Badge variant="secondary" className="mb-4 pointer-events-none">
+                <Zap className="h-3 w-3 mr-1" />
+                Real-time monitoring
+              </Badge>
+              <h1 className="text-4xl md:text-6xl font-bold mb-6 text-balance pointer-events-none">
+                Never miss a <span className="text-primary">competitor move</span> again.
+              </h1>
+              <p className="text-xl text-muted-foreground mb-8 max-w-2xl text-pretty pointer-events-none">
+                Track your competitors' website changes in real-time. Get instant notifications, maintain detailed change
+                history, and react faster to market movements.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 pointer-events-auto">
+                <Link href="/auth">
+                  <Button size="lg" className="text-lg px-8">
+                    Start Monitoring
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+                <Button size="lg" variant="outline" className="text-lg px-8 bg-transparent">
+                  View Demo
                 </Button>
-              </Link>
-              <Button size="lg" variant="outline" className="text-lg px-8 bg-transparent">
-                View Demo
-              </Button>
+              </div>
             </div>
           </div>
         </div>
