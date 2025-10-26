@@ -38,6 +38,20 @@ export interface ChangeHistory {
   changeSummary: string
   created_at: string
   updated_at: string
+  metadata?: {
+    extractedSections?: {
+      summary: string
+      sectionsCount: number
+      sectionTypes: string[]
+    }
+    aiAnalysis?: {
+      resumen: string
+      impacto: string[]
+      recomendaciones: string[]
+      urgencia: 'Alto' | 'Medio' | 'Bajo'
+      insights?: string
+    }
+  }
   // Campos opcionales para compatibilidad
   competitorId?: string
   timestamp?: string  // Alias de created_at
@@ -199,10 +213,10 @@ class CompetitorsApiClient {
   /**
    * Ejecutar monitoreo manual
    */
-  async manualCheck(id: string, simulate: boolean = false): Promise<{ success: boolean; data: any; message: string }> {
+  async manualCheck(id: string, simulate: boolean = false, enableAI: boolean = false): Promise<{ success: boolean; data: any; message: string }> {
     return apiClient.request<{ success: boolean; data: any; message: string }>(`${this.baseEndpoint}/${id}/manual-check`, {
       method: 'POST',
-      body: JSON.stringify({ simulate }),
+      body: JSON.stringify({ simulate, enableAI }),
     })
   }
 

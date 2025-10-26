@@ -4,6 +4,8 @@ import { useParams, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { competitorsApi, type Competitor, type ChangeHistory } from "@/lib/competitors-api"
+import { AIAnalysisCard } from "@/components/ai-analysis-card"
+import { ExtractedSectionsCard } from "@/components/extracted-sections-card"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -44,6 +46,8 @@ import {
   Package,
   ChevronRight,
   Save,
+  Brain,
+  Sparkles,
 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 
@@ -126,6 +130,7 @@ export default function CompetitorDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [manualCheckLoading, setManualCheckLoading] = useState(false)
+  const [enableAI, setEnableAI] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [editMode, setEditMode] = useState(false)
   const [activeTab, setActiveTab] = useState("overview")
@@ -175,10 +180,12 @@ export default function CompetitorDetailPage() {
   const handleManualCheck = async () => {
     setManualCheckLoading(true)
     try {
-      await competitorsApi.manualCheck(competitorId)
+      await competitorsApi.manualCheck(competitorId, false, enableAI)
       toast({
         title: "Verificación completada",
-        description: "El check manual se ejecutó correctamente",
+        description: enableAI 
+          ? "Check manual ejecutado con análisis de IA" 
+          : "Check manual ejecutado correctamente",
       })
       await loadData()
     } catch (err) {
@@ -314,6 +321,18 @@ export default function CompetitorDetailPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 px-3 py-1.5 border rounded-md bg-background">
+              <Switch
+                id="enable-ai"
+                checked={enableAI}
+                onCheckedChange={setEnableAI}
+                className="scale-75"
+              />
+              <label htmlFor="enable-ai" className="text-xs font-medium cursor-pointer flex items-center gap-1">
+                <Brain className="h-3 w-3" />
+                Análisis IA
+              </label>
+            </div>
             <Button variant="outline" size="sm" onClick={handleManualCheck} disabled={manualCheckLoading}>
               {manualCheckLoading ? (
                 <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
@@ -321,6 +340,7 @@ export default function CompetitorDetailPage() {
                 <Play className="h-4 w-4 mr-2" />
               )}
               Check Manual
+              {enableAI && <Sparkles className="h-3 w-3 ml-1 text-primary" />}
             </Button>
             <Button variant="outline" size="sm" onClick={handleToggleMonitoring}>
               {competitor.monitoringEnabled ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
@@ -541,11 +561,30 @@ export default function CompetitorDetailPage() {
                 <CardDescription>Operaciones comunes para este competidor</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <Button variant="outline" onClick={handleManualCheck} disabled={manualCheckLoading}>
-                    <Play className="h-4 w-4 mr-2" />
-                    Ejecutar Check
-                  </Button>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        id="enable-ai-quick"
+                        checked={enableAI}
+                        onCheckedChange={setEnableAI}
+                      />
+                      <label htmlFor="enable-ai-quick" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                        <Brain className="h-4 w-4 text-primary" />
+                        Habilitar Análisis de IA
+                      </label>
+                    </div>
+                    <Badge variant={enableAI ? "default" : "secondary"}>
+                      {enableAI ? "Activado" : "Desactivado"}
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <Button variant="outline" onClick={handleManualCheck} disabled={manualCheckLoading}>
+                      <Play className="h-4 w-4 mr-2" />
+                      Ejecutar Check
+                      {enableAI && <Sparkles className="h-3 w-3 ml-1 text-primary" />}
+                    </Button>
                   <Button variant="outline" onClick={() => setActiveTab("history")}>
                     <History className="h-4 w-4 mr-2" />
                     Ver Historial
@@ -563,6 +602,7 @@ export default function CompetitorDetailPage() {
                     <FileText className="h-4 w-4 mr-2" />
                     Exportar Datos
                   </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -612,14 +652,37 @@ export default function CompetitorDetailPage() {
                                   <span>•</span>
                                   <span>{change.changeCount} cambios</span>
                                   <span>•</span>
-                                  <span>{Number(change.changePercentage || 0).toFixed(1)}% modificado</span>
+                                  <span>{Number(change.changePercentage || 0).toFixed(2)}% modificado</span>
                                   <span>•</span>
                                   {change.isFullVersion ? (
                                     <span className="font-medium text-primary">Versión completa</span>
                                   ) : (
                                     <span className="font-medium text-muted-foreground">Versión parcial</span>
                                   )}
+                                  {change.metadata?.aiAnalysis && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="flex items-center gap-1 text-primary font-medium">
+                                        <Brain className="h-3 w-3" />
+                                        Análisis de IA
+                                      </span>
+                                    </>
+                                  )}
                                 </div>
+
+                                {/* Secciones Extraídas */}
+                                {change.metadata?.extractedSections && (
+                                  <div className="mt-3">
+                                    <ExtractedSectionsCard sections={change.metadata.extractedSections} />
+                                  </div>
+                                )}
+
+                                {/* Análisis de IA */}
+                                {change.metadata?.aiAnalysis && (
+                                  <div className="mt-3">
+                                    <AIAnalysisCard analysis={change.metadata.aiAnalysis} />
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </div>
