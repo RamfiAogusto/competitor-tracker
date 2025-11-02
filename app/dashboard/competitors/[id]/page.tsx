@@ -517,7 +517,11 @@ export default function CompetitorDetailPage() {
                         const timestamp = change.timestamp || change.created_at
                         const summary = change.summary || change.changeSummary
                         return (
-                          <div key={change.id} className="flex items-start gap-3 pb-4 border-b last:border-0 last:pb-0">
+                          <div
+                            key={change.id}
+                            className="flex items-start gap-3 pb-4 border-b last:border-0 last:pb-0 cursor-pointer hover:bg-accent/50 -mx-2 px-2 py-2 rounded-lg transition-colors"
+                            onClick={() => router.push(`/dashboard/competitors/${competitorId}/changes/${change.id}`)}
+                          >
                             <div className="mt-1">
                               <Icon className="h-4 w-4 text-muted-foreground" />
                             </div>
@@ -537,7 +541,10 @@ export default function CompetitorDetailPage() {
                                 <span>{Number(change.changePercentage || 0).toFixed(1)}%</span>
                               </div>
                             </div>
-                            <Button variant="ghost" size="sm">
+                            <Button variant="ghost" size="sm" onClick={(e) => {
+                              e.stopPropagation()
+                              router.push(`/dashboard/competitors/${competitorId}/changes/${change.id}`)
+                            }}>
                               <ChevronRight className="h-4 w-4" />
                             </Button>
                           </div>
@@ -643,7 +650,17 @@ export default function CompetitorDetailPage() {
                                   <Badge variant="outline">{change.changeType}</Badge>
                                   {change.isCurrent && <Badge variant="default" className="text-xs">Actual</Badge>}
                                 </div>
-                                <span className="text-sm text-muted-foreground">{formatTimestamp(timestamp)}</span>
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-muted-foreground">{formatTimestamp(timestamp)}</span>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => router.push(`/dashboard/competitors/${competitorId}/changes/${change.id}`)}
+                                  >
+                                    Ver Detalle
+                                    <ChevronRight className="h-4 w-4 ml-1" />
+                                  </Button>
+                                </div>
                               </div>
                               <div>
                                 <h4 className="font-medium">{summary}</h4>
