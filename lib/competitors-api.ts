@@ -39,6 +39,18 @@ export interface ChangeHistory {
   created_at: string
   updated_at: string
   metadata?: {
+    initialStructure?: {
+      summary: string
+      sectionsCount: number
+      sections: Array<{
+        selector: string
+        type: string
+        confidence: number
+        text?: string
+        hasId: boolean
+        hasClass: boolean
+      }>
+    }
     extractedSections?: {
       summary: string
       sectionsCount: number

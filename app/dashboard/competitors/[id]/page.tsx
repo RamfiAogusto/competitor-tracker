@@ -6,6 +6,7 @@ import { DashboardLayout } from "@/components/dashboard-layout"
 import { competitorsApi, type Competitor, type ChangeHistory } from "@/lib/competitors-api"
 import { AIAnalysisCard } from "@/components/ai-analysis-card"
 import { ExtractedSectionsCard } from "@/components/extracted-sections-card"
+import { InitialStructureCard } from "@/components/initial-structure-card"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -687,7 +688,14 @@ export default function CompetitorDetailPage() {
                                   )}
                                 </div>
 
-                                {/* Secciones Extraídas */}
+                                {/* Estructura Inicial (solo en primera captura) */}
+                                {change.metadata?.initialStructure && (
+                                  <div className="mt-3">
+                                    <InitialStructureCard structure={change.metadata.initialStructure} />
+                                  </div>
+                                )}
+
+                                {/* Secciones Extraídas (cambios detectados) */}
                                 {change.metadata?.extractedSections && (
                                   <div className="mt-3">
                                     <ExtractedSectionsCard sections={change.metadata.extractedSections} />
