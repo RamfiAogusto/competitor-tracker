@@ -88,6 +88,11 @@ const getConfidenceLabel = (confidence: number) => {
 }
 
 export const InitialStructureCard = ({ structure, className = "" }: InitialStructureCardProps) => {
+  // Validar que structure tiene las propiedades necesarias
+  if (!structure || !structure.sections || !Array.isArray(structure.sections)) {
+    return null
+  }
+  
   // Agrupar secciones por tipo
   const sectionsByType = structure.sections.reduce((acc, section) => {
     if (!acc[section.type]) {
