@@ -1,5 +1,6 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -17,13 +18,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Plus, MoreHorizontal, ExternalLink, Eye, EyeOff, Trash2, Edit, Globe, Clock, Play } from "lucide-react"
+import { Plus, MoreHorizontal, ExternalLink, Eye, EyeOff, Trash2, Edit, Globe, Clock, Play, RefreshCw, Sparkles, AlertTriangle } from "lucide-react"
 import { DashboardLayout } from "@/components/dashboard-layout"
 import { useState, useEffect } from "react"
 import { competitorsApi, Competitor, CompetitorStats } from "@/lib/competitors-api"
 import { useAuth } from "@/contexts/AuthContext"
+import { toast } from "@/components/ui/use-toast"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function CompetitorsPage() {
+  const router = useRouter()
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [competitors, setCompetitors] = useState<Competitor[]>([])
   const [stats, setStats] = useState<CompetitorStats | null>(null)
@@ -80,11 +84,24 @@ export default function CompetitorsPage() {
 
   const handleAddCompetitor = async () => {
     try {
-      await competitorsApi.createCompetitor(formData)
+      const response = await competitorsApi.createCompetitor(formData)
       setIsAddDialogOpen(false)
       setFormData({ name: '', url: '', description: '', monitoringEnabled: true, priority: 'medium' })
       setError(null) // Limpiar errores previos
-      await loadData() // Recargar datos
+      
+      // Mostrar toast de éxito
+      toast({
+        title: "Competidor creado",
+        description: "El análisis inicial está en progreso. Serás redirigido al perfil...",
+      })
+      
+      // Redirigir al perfil del competidor recién creado INMEDIATAMENTE
+      // para que el useEffect establezca la conexión SSE antes del análisis
+      if (response.success && response.data?.id) {
+        router.push(`/dashboard/competitors/${response.data.id}`)
+      } else {
+        await loadData() // Recargar datos si no hay ID
+      }
     } catch (err: any) {
       console.error('Error creating competitor:', err)
       
