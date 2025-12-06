@@ -94,6 +94,10 @@ export default function ChangeDetailPage() {
   }
 
   const getChangeTypeLabel = (type: string) => {
+    if (type === "other" && change?.changeSummary?.toLowerCase().includes("primera captura")) {
+      return "Captura Inicial"
+    }
+
     const labels: Record<string, string> = {
       content: "Contenido",
       design: "Diseño",
