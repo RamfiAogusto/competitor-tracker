@@ -169,11 +169,11 @@ export default function CompetitorDetailPage() {
     // 3. Existe el competidor (competitor)
     // 4. No tiene versiones aún (totalVersions === 0)
     if (!isAuthenticated || loading || !competitor || competitor.totalVersions > 0) {
-      console.log('⏭️ Saltando SSE:', { 
+      console.log('⏭️ Saltando SSE:', {
         isAuthenticated,
-        loading, 
-        hasCompetitor: !!competitor, 
-        totalVersions: competitor?.totalVersions 
+        loading,
+        hasCompetitor: !!competitor,
+        totalVersions: competitor?.totalVersions
       })
       return
     }
@@ -203,7 +203,7 @@ export default function CompetitorDetailPage() {
         setLoading(true)
         setTimeout(() => setLoading(false), 100)
       }, 500)
-      
+
       return () => clearTimeout(retryTimeout)
     }
 
@@ -211,7 +211,7 @@ export default function CompetitorDetailPage() {
     let fallbackInterval: NodeJS.Timeout | null = null
 
     // Intentar SSE primero
-    console.log('📡 Estableciendo conexión SSE para análisis...', { 
+    console.log('📡 Estableciendo conexión SSE para análisis...', {
       competitorId,
       url: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'}/api/sse/competitor/${competitorId}/analysis`
     })
@@ -237,19 +237,19 @@ export default function CompetitorDetailPage() {
           sseConnected = true
         } else if (data.type === 'analysis_complete') {
           console.log('🎉 Análisis completado, recargando datos...')
-          
+
           // Mostrar toast de éxito
           toast({
             title: "✅ Análisis completado",
             description: "El sitio web ha sido analizado exitosamente con IA",
           })
-          
+
           // Recargar todos los datos
           await loadData()
-          
+
           // Cerrar la conexión SSE
           eventSource.close()
-          
+
           // Limpiar fallback si existe
           if (fallbackInterval) clearInterval(fallbackInterval)
         } else if (data.type === 'analysis_error') {
@@ -260,7 +260,7 @@ export default function CompetitorDetailPage() {
             variant: "destructive",
           })
           eventSource.close()
-          
+
           // Limpiar fallback si existe
           if (fallbackInterval) clearInterval(fallbackInterval)
         }
@@ -272,7 +272,7 @@ export default function CompetitorDetailPage() {
     eventSource.onerror = (error) => {
       console.error('❌ Error en conexión SSE:', error)
       console.error('❌ EventSource readyState:', eventSource.readyState) // 0=connecting, 1=open, 2=closed
-      
+
       // Mostrar toast solo si no es un cierre normal
       if (eventSource.readyState !== 2) {
         toast({
@@ -281,7 +281,7 @@ export default function CompetitorDetailPage() {
           variant: "default",
         })
       }
-      
+
       eventSource.close()
     }
 
@@ -293,13 +293,13 @@ export default function CompetitorDetailPage() {
           readyState: eventSource.readyState, // 0=connecting, 1=open, 2=closed
           url: eventSource.url
         })
-        
+
         let pollCount = 0
         const maxPolls = 90 // 90 * 10s = 15 minutos máximo
-        
+
         fallbackInterval = setInterval(async () => {
           pollCount++
-          
+
           if (pollCount > maxPolls) {
             console.warn('⏰ Polling timeout alcanzado después de 15 minutos')
             if (fallbackInterval) clearInterval(fallbackInterval)
@@ -369,8 +369,8 @@ export default function CompetitorDetailPage() {
       await competitorsApi.manualCheck(competitorId, false, enableAI)
       toast({
         title: "Verificación completada",
-        description: enableAI 
-          ? "Check manual ejecutado con análisis de IA" 
+        description: enableAI
+          ? "Check manual ejecutado con análisis de IA"
           : "Check manual ejecutado correctamente",
       })
       await loadData()
@@ -552,50 +552,49 @@ export default function CompetitorDetailPage() {
           </div>
         </div>
 
-               {/* Banner de análisis en progreso */}
-               {competitor.totalVersions === 0 && (
-                 <div className="relative overflow-hidden rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-950/40 shadow-xl">
-                   {/* Fondo animado con gradiente */}
-                   <div className="absolute inset-0 bg-gradient-to-br from-blue-100 via-indigo-50 to-purple-100 dark:from-blue-900/20 dark:via-indigo-900/20 dark:to-purple-900/20 opacity-70"></div>
-                   
-                   {/* Contenido */}
-                   <div className="relative p-6">
-                     <div className="flex items-start gap-4">
-                       <div className="relative flex-shrink-0">
-                         <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-300 dark:border-blue-700 border-t-blue-600 dark:border-t-blue-400"></div>
-                         <div className="absolute inset-0 flex items-center justify-center">
-                           <Brain className="h-6 w-6 text-blue-600 dark:text-blue-400 animate-pulse" />
-                         </div>
-                       </div>
-                       <div className="flex-1 min-w-0">
-                         <div className="flex items-center gap-3 mb-3">
-                           <h3 className="text-xl font-bold text-blue-900 dark:text-blue-100">
-                             🤖 Analizando competidor con IA
-                           </h3>
-                           <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 dark:bg-green-900/50 rounded-full border border-green-300 dark:border-green-700">
-                             <div className="h-2.5 w-2.5 rounded-full bg-green-500 animate-pulse"></div>
-                             <span className="text-xs font-bold text-green-700 dark:text-green-300">EN VIVO</span>
-                           </div>
-                         </div>
-                         <p className="text-base text-blue-900 dark:text-blue-100 mb-4 font-medium">
-                           Estamos capturando el sitio web y analizando su estructura con inteligencia artificial. 
-                           La página se actualizará automáticamente cuando termine.
-                         </p>
-                         <div className="flex flex-wrap items-center gap-4 text-sm">
-                           <div className="flex items-center gap-2 text-blue-800 dark:text-blue-200 bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-md">
-                             <Clock className="h-4 w-4" />
-                             <span className="font-semibold">Tiempo variable según complejidad del sitio</span>
-                           </div>
-                           <div className="flex items-center gap-2 text-purple-800 dark:text-purple-200 bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-md">
-                             <Sparkles className="h-4 w-4" />
-                             <span className="font-semibold">Análisis con IA habilitado</span>
-                           </div>
-                         </div>
-                       </div>
-                     </div>
-                   </div>
-                 </div>
-               )}
+        {/* Banner de análisis en progreso */}
+        {competitor.totalVersions === 0 && (
+          <div className="relative overflow-hidden rounded-lg border border-primary/50 bg-muted/30 shadow-sm">
+            {/* Fondo sutil animado */}
+            <div className="absolute inset-0 bg-primary/5 animate-pulse"></div>
+
+            {/* Contenido */}
+            <div className="relative p-6">
+              <div className="flex items-start gap-4">
+                <div className="relative flex-shrink-0">
+                  <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent"></div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Brain className="h-4 w-4 text-primary" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <h3 className="text-lg font-semibold text-foreground">
+                      Analizando competidor con IA
+                    </h3>
+                    <Badge variant="default" className="animate-pulse">
+                      EN VIVO
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Estamos capturando el sitio web y analizando su estructura.
+                    La página se actualizará automáticamente.
+                  </p>
+                  <div className="flex flex-wrap items-center gap-4 text-xs">
+                    <div className="flex items-center gap-2 text-foreground/80 bg-background/50 px-2.5 py-1 rounded-md border border-border/50">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>Tiempo estimado: 1-2 min</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-foreground/80 bg-background/50 px-2.5 py-1 rounded-md border border-border/50">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      <span>Análisis IA activo</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -696,12 +695,12 @@ export default function CompetitorDetailPage() {
                     <div>
                       <Label className="text-muted-foreground">Fecha de creación</Label>
                       <p className="text-sm">
-                        {competitor.created_at 
+                        {competitor.created_at
                           ? new Date(competitor.created_at).toLocaleDateString("es-ES", {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })
                           : 'No disponible'
                         }
                       </p>
@@ -709,7 +708,7 @@ export default function CompetitorDetailPage() {
                     <div>
                       <Label className="text-muted-foreground">Última actualización</Label>
                       <p className="text-sm">
-                        {competitor.updated_at 
+                        {competitor.updated_at
                           ? formatTimestamp(competitor.updated_at)
                           : 'No disponible'
                         }
@@ -816,30 +815,30 @@ export default function CompetitorDetailPage() {
                       {enableAI ? "Activado" : "Desactivado"}
                     </Badge>
                   </div>
-                  
+
                   <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <Button variant="outline" onClick={handleManualCheck} disabled={manualCheckLoading}>
                       <Play className="h-4 w-4 mr-2" />
                       Ejecutar Check
                       {enableAI && <Sparkles className="h-3 w-3 ml-1 text-primary" />}
                     </Button>
-                  <Button variant="outline" onClick={() => setActiveTab("history")}>
-                    <History className="h-4 w-4 mr-2" />
-                    Ver Historial
-                  </Button>
-                  <Button variant="outline" onClick={() => router.push("/dashboard/notifications")}>
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    Configurar Alertas
-                  </Button>
-                  <Button variant="outline" onClick={() => {
-                    toast({
-                      title: "Próximamente",
-                      description: "La funcionalidad de exportar datos estará disponible pronto",
-                    })
-                  }}>
-                    <FileText className="h-4 w-4 mr-2" />
-                    Exportar Datos
-                  </Button>
+                    <Button variant="outline" onClick={() => setActiveTab("history")}>
+                      <History className="h-4 w-4 mr-2" />
+                      Ver Historial
+                    </Button>
+                    <Button variant="outline" onClick={() => router.push("/dashboard/notifications")}>
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Configurar Alertas
+                    </Button>
+                    <Button variant="outline" onClick={() => {
+                      toast({
+                        title: "Próximamente",
+                        description: "La funcionalidad de exportar datos estará disponible pronto",
+                      })
+                    }}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Exportar Datos
+                    </Button>
                   </div>
                 </div>
               </CardContent>

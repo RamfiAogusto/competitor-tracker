@@ -164,7 +164,7 @@ export const InitialStructureCard = ({ structure, className = "" }: InitialStruc
                           </div>
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent side="right" className="max-w-[300px] text-xs">
+                      <TooltipContent side="right" className="max-w-[300px] text-xs bg-popover text-popover-foreground border border-border shadow-md z-50">
                         <div className="space-y-2">
                           <p className="font-semibold flex items-center gap-2">
                             {getSectionIcon(section.type)}
