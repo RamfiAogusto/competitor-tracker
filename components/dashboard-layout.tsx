@@ -17,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ModeToggle } from "@/components/mode-toggle"
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -84,19 +85,24 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               />
             </div>
 
-            <Button variant="ghost" size="sm">
-              <Bell className="h-4 w-4" />
-              <Badge variant="destructive" className="ml-1 h-5 w-5 rounded-full p-0 text-xs">
-                3
-              </Badge>
-            </Button>
+
+            <div className="flex items-center gap-2">
+              <ModeToggle />
+
+              <Button variant="ghost" size="sm">
+                <Bell className="h-4 w-4" />
+                <Badge variant="destructive" className="ml-1 h-5 w-5 rounded-full p-0 text-xs">
+                  3
+                </Badge>
+              </Button>
+            </div>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="sm" className="flex items-center space-x-2">
                   <Avatar className="h-6 w-6">
-                    <AvatarImage 
-                      src={getUserAvatar(user)} 
+                    <AvatarImage
+                      src={getUserAvatar(user)}
                       alt={user?.name || 'Usuario'}
                     />
                     <AvatarFallback className="text-xs">
