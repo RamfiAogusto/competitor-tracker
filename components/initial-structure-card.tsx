@@ -2,17 +2,20 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { 
-  Layers, 
-  DollarSign, 
-  Sparkles, 
-  FileText, 
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import {
+  Layers,
+  DollarSign,
+  Sparkles,
+  FileText,
   Users,
   Layout,
   Navigation,
   MessageSquare,
-  CheckCircle2
+  CheckCircle2,
+  Code,
+  Info
 } from "lucide-react"
 
 interface InitialStructureCardProps {
@@ -44,7 +47,7 @@ const getSectionIcon = (type: string) => {
     case 'navigation':
       return <Navigation className="h-3.5 w-3.5" />
     case 'header':
-      return <Layout className="h-3.5 w-3.5" />
+      return <Layout className="h-3.5 w-3.5 rotate-180" />
     case 'footer':
       return <Layout className="h-3.5 w-3.5" />
     case 'cta':
@@ -78,22 +81,15 @@ const getSectionLabel = (type: string) => {
 const getConfidenceColor = (confidence: number) => {
   if (confidence >= 0.8) return "text-green-600 dark:text-green-400"
   if (confidence >= 0.6) return "text-yellow-600 dark:text-yellow-400"
-  return "text-orange-600 dark:text-orange-400"
-}
-
-const getConfidenceLabel = (confidence: number) => {
-  if (confidence >= 0.8) return "Alta"
-  if (confidence >= 0.6) return "Media"
-  return "Baja"
+  return "text-muted-foreground"
 }
 
 export const InitialStructureCard = ({ structure, className = "" }: InitialStructureCardProps) => {
-  // Validar que structure tiene las propiedades necesarias
   if (!structure || !structure.sections || !Array.isArray(structure.sections)) {
     return null
   }
-  
-  // Agrupar secciones por tipo
+
+  // Agrupar secciones por tipo para los badges de resumen
   const sectionsByType = structure.sections.reduce((acc, section) => {
     if (!acc[section.type]) {
       acc[section.type] = []
@@ -112,7 +108,7 @@ export const InitialStructureCard = ({ structure, className = "" }: InitialStruc
           <div>
             <CardTitle className="text-base">Estructura del Sitio Web</CardTitle>
             <CardDescription className="text-xs">
-              {structure.sectionsCount} sección{structure.sectionsCount !== 1 ? 'es' : ''} detectada{structure.sectionsCount !== 1 ? 's' : ''}
+              {structure.sectionsCount} secciones detectadas
             </CardDescription>
           </div>
         </div>
@@ -124,80 +120,80 @@ export const InitialStructureCard = ({ structure, className = "" }: InitialStruc
             {structure.summary}
           </p>
 
-          {/* Resumen por tipo */}
+          {/* Resumen por tipo (Badges) */}
           <div className="flex flex-wrap gap-2">
             {Object.entries(sectionsByType).map(([type, sections]) => (
-              <Badge key={type} variant="secondary" className="gap-1.5">
+              <Badge key={type} variant="secondary" className="gap-1.5 h-6 text-xs font-normal">
                 {getSectionIcon(type)}
                 {getSectionLabel(type)}
-                <span className="ml-1 text-xs opacity-70">({sections.length})</span>
+                <span className="ml-1 opacity-70">({sections.length})</span>
               </Badge>
             ))}
           </div>
 
-          {/* Lista detallada de secciones principales (top 10) */}
-          <div className="space-y-3 mt-4">
-            <h4 className="text-sm font-medium">Secciones Principales:</h4>
-            {structure.sections.slice(0, 10).map((section, index) => (
-              <div key={index} className="space-y-2 p-3 rounded-lg bg-muted/50 border border-border">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    {getSectionIcon(section.type)}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-medium">
-                          {getSectionLabel(section.type)}
-                        </span>
-                        <code className="text-xs bg-background px-1.5 py-0.5 rounded border">
-                          {section.selector}
-                        </code>
-                      </div>
-                      {section.text && (
-                        <p className="text-xs text-muted-foreground mt-1 truncate">
-                          {section.text.substring(0, 80)}...
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {section.hasId && (
-                      <Badge variant="outline" className="text-xs">
-                        ID
-                      </Badge>
-                    )}
-                    {section.hasClass && (
-                      <Badge variant="outline" className="text-xs">
-                        Class
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Barra de confianza */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-muted-foreground">Confianza:</span>
-                    <span className={`font-medium ${getConfidenceColor(section.confidence)}`}>
-                      {getConfidenceLabel(section.confidence)} ({Math.round(section.confidence * 100)}%)
-                    </span>
-                  </div>
-                  <Progress 
-                    value={section.confidence * 100} 
-                    className="h-1.5"
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
+          <div className="rounded-md border bg-muted/30">
+            <div className="p-2 border-b bg-muted/50 text-xs font-medium text-muted-foreground flex justify-between items-center">
+              <span>Detalle de Secciones</span>
+              <span className="text-[10px] uppercase tracking-wider">Scroll para ver todo</span>
+            </div>
 
-          {structure.sections.length > 10 && (
-            <p className="text-xs text-muted-foreground text-center pt-2">
-              Mostrando 10 de {structure.sections.length} secciones detectadas
-            </p>
-          )}
+            <ScrollArea className="h-[200px]">
+              <div className="p-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                <TooltipProvider delayDuration={0}>
+                  {structure.sections.map((section, index) => (
+                    <Tooltip key={index}>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-2 p-2 rounded hover:bg-muted/80 border border-transparent hover:border-border transition-colors cursor-default group">
+                          <div className={`p-1.5 rounded-md bg-background border flex-shrink-0 ${getConfidenceColor(section.confidence)}`}>
+                            {getSectionIcon(section.type)}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-medium truncate">
+                                {getSectionLabel(section.type)}
+                              </span>
+                              <span className={`text-[10px] font-mono ${getConfidenceColor(section.confidence)}`}>
+                                {Math.round(section.confidence * 100)}%
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
+                              <Code className="h-3 w-3" />
+                              <span className="font-mono truncate opacity-70 group-hover:opacity-100">{section.selector}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="right" className="max-w-[300px] text-xs">
+                        <div className="space-y-2">
+                          <p className="font-semibold flex items-center gap-2">
+                            {getSectionIcon(section.type)}
+                            {getSectionLabel(section.type)}
+                          </p>
+                          <div className="space-y-1">
+                            <p><span className="text-muted-foreground">Selector:</span> <code className="bg-muted px-1 rounded">{section.selector}</code></p>
+                            <p><span className="text-muted-foreground">Confianza:</span> {Math.round(section.confidence * 100)}%</p>
+                            {section.hasId && <Badge variant="outline" className="text-[10px] mr-1 h-5">ID</Badge>}
+                            {section.hasClass && <Badge variant="outline" className="text-[10px] h-5">Class</Badge>}
+                          </div>
+                          {section.text && (
+                            <div className="pt-1 border-t mt-1">
+                              <span className="text-muted-foreground block mb-1">Contenido detectado:</span>
+                              <p className="text-muted-foreground italic line-clamp-3">
+                                "{section.text.substring(0, 150)}{section.text.length > 150 ? '...' : ''}"
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </TooltipProvider>
+              </div>
+            </ScrollArea>
+          </div>
         </div>
       </CardContent>
     </Card>
   )
 }
-
